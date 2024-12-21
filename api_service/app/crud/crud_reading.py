@@ -144,6 +144,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         import logging
         logger = logging.getLogger(__name__)
 
+        # Filter out NaN values using a WHERE clause
         query = select(
             func.min(Reading.value).label("min"),
             func.max(Reading.value).label("max"),
@@ -152,7 +153,9 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         ).where(
             and_(
                 Reading.device_id == device_id,
-                Reading.reading_type == reading_type
+                Reading.reading_type == reading_type,
+                Reading.value != float('nan'),  # Exclude NaN values
+                Reading.value.isnot(None)  # Exclude NULL values
             )
         )
 
@@ -165,34 +168,28 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         stats = result.one()
         
         logger.debug(f"Raw stats from database: min={stats.min}, max={stats.max}, avg={stats.avg}, count={stats.count}")
-        
-        # Handle None and NaN values
-        def safe_float(value: Any, label: str) -> float:
-            logger.debug(f"Converting {label}: {value} (type: {type(value)})")
+
+        # Convert values, defaulting to None instead of 0.0 if no valid readings
+        def safe_float(value: Any) -> Optional[float]:
             if value is None:
-                logger.debug(f"{label} is None, returning 0.0")
-                return 0.0
+                return None
             try:
                 float_val = float(value)
-                # Check for NaN
                 if float_val != float_val:  # NaN check
-                    logger.debug(f"{label} is NaN, returning 0.0")
-                    return 0.0
-                logger.debug(f"{label} converted to: {float_val}")
+                    return None
                 return float_val
-            except (ValueError, TypeError) as e:
-                logger.debug(f"Error converting {label}: {str(e)}")
-                return 0.0
+            except (ValueError, TypeError):
+                return None
 
-        # Convert values with logging
-        min_val = safe_float(stats.min, "min")
-        max_val = safe_float(stats.max, "max")
-        avg_val = safe_float(stats.avg, "avg")
+        min_val = safe_float(stats.min)
+        max_val = safe_float(stats.max)
+        avg_val = safe_float(stats.avg)
 
+        # Only use 0.0 as fallback if we actually have no valid readings
         result = {
-            "min": min_val,
-            "max": max_val,
-            "avg": avg_val,
+            "min": min_val if min_val is not None else 0.0,
+            "max": max_val if max_val is not None else 0.0,
+            "avg": avg_val if avg_val is not None else 0.0,
             "count": int(stats.count)
         }
         
