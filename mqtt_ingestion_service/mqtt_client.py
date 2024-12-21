@@ -56,24 +56,29 @@ class MQTTClientService:
                     device_id = self.parse_device_id(topic)
                     reading_type = self.parse_reading_type(topic)
                     
-                    # Parse payload as float
+                    # Parse payload as float, set to None if invalid
                     try:
                         value = float(payload)
-                    except ValueError as e:
-                        logger.error(f"Worker {worker_id}: Invalid payload format - expected number, got: {payload}")
-                        continue
+                    except ValueError:
+                        logger.warning(f"Worker {worker_id}: Non-numeric payload received: {payload}")
+                        value = None
 
                     # Create reading object with either temperature or humidity
-                    reading = ReadingCreate(
-                        device_id=device_id,
-                        temperature=value if reading_type == "temperature" else None,
-                        humidity=value if reading_type == "humidity" else None,
-                        timestamp=datetime.utcnow()
-                    )
+                    reading_data = {
+                        "device_id": device_id,
+                        "temperature": value if reading_type == "temperature" else None,
+                        "humidity": value if reading_type == "humidity" else None,
+                        "timestamp": datetime.utcnow()
+                    }
 
-                    logger.info(f"Worker {worker_id}: Processing {reading_type} reading for device {device_id}")
-                    await self.message_processor.process_message(reading)
-                    logger.info(f"Worker {worker_id}: Successfully processed {reading_type} reading for device {device_id}")
+                    reading = ReadingCreate(**reading_data)
+                    
+                    if value is not None:  # Only process if we got a valid numeric reading
+                        logger.info(f"Worker {worker_id}: Processing {reading_type} reading for device {device_id}")
+                        await self.message_processor.process_message(reading)
+                        logger.info(f"Worker {worker_id}: Successfully processed {reading_type} reading for device {device_id}")
+                    else:
+                        logger.warning(f"Worker {worker_id}: Skipping invalid {reading_type} reading for device {device_id}")
                 except ValueError as e:
                     logger.error(f"Worker {worker_id}: Topic parsing error: {str(e)}")
                 except Exception as e:
