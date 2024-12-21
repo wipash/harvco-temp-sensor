@@ -235,19 +235,29 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         Returns:
             Dict[str, Any]: Device statistics including reading counts and latest values
         """
+        from sqlalchemy import and_, func, not_
+        
+        # Base query filtering out NULL and NaN values
+        base_conditions = [
+            Reading.device_id == device_id,
+            Reading.value.isnot(None),  # Filter out NULL values
+            not_(func.isnan(Reading.value))  # Filter out NaN values
+        ]
+
+        if reading_type:
+            base_conditions.append(Reading.reading_type == reading_type)
+        if start_date:
+            base_conditions.append(Reading.timestamp >= start_date)
+        if end_date:
+            base_conditions.append(Reading.timestamp <= end_date)
+
+        # Query for statistics with NULL/NaN filtering
         query = select(
             func.count(Reading.id).label("total_readings"),
             func.min(Reading.value).label("min_value"),
             func.max(Reading.value).label("max_value"),
             func.avg(Reading.value).label("avg_value")
-        ).where(Reading.device_id == device_id)
-
-        if reading_type:
-            query = query.where(Reading.reading_type == reading_type)
-        if start_date:
-            query = query.where(Reading.timestamp >= start_date)
-        if end_date:
-            query = query.where(Reading.timestamp <= end_date)
+        ).where(and_(*base_conditions))
 
         result = await db.execute(query)
         stats = result.one()
@@ -255,24 +265,37 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         # Get latest reading
         latest_query = (
             select(Reading)
-            .where(Reading.device_id == device_id)
+            .where(and_(*base_conditions))
             .order_by(Reading.timestamp.desc())
             .limit(1)
         )
-        if reading_type:
-            latest_query = latest_query.where(Reading.reading_type == reading_type)
         
         latest_result = await db.execute(latest_query)
         latest_reading = latest_result.scalar_one_or_none()
 
+        # Helper function to safely convert values
+        def safe_float(value) -> Optional[float]:
+            if value is None:
+                return None
+            try:
+                float_val = float(value)
+                return float_val if not float_val.is_nan() else None
+            except (ValueError, TypeError):
+                return None
+
+        # Process statistics, ensuring we have valid numbers
+        min_val = safe_float(stats.min_value)
+        max_val = safe_float(stats.max_value)
+        avg_val = safe_float(stats.avg_value)
+
         return {
             "total_readings": stats.total_readings,
-            "min_value": float(stats.min_value) if stats.min_value is not None else None,
-            "max_value": float(stats.max_value) if stats.max_value is not None else None,
-            "avg_value": float(stats.avg_value) if stats.avg_value is not None else None,
+            "min_value": min_val,
+            "max_value": max_val,
+            "avg_value": avg_val,
             "latest_reading": {
-                "value": latest_reading.value,
-                "timestamp": latest_reading.timestamp
+                "value": latest_reading.value if latest_reading else None,
+                "timestamp": latest_reading.timestamp if latest_reading else None
             } if latest_reading else None
         }
 
