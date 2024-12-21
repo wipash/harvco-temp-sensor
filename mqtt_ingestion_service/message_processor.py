@@ -23,7 +23,6 @@ class MessageProcessor:
                 logging.info(f"Creating new device with ID: {reading_data.device_id}")
                 device = Device(device_id=reading_data.device_id)
                 self.session.add(device)
-                self.session.add(reading)
                 await self.session.commit()
         except SQLAlchemyError as e:
             await self.session.rollback()
@@ -32,14 +31,11 @@ class MessageProcessor:
         except Exception as e:
             logging.error(f"An unexpected error occurred: {e}")
             raise
-            await self.session.refresh(device)
 
-        if not device:
-            logging.info(f"Creating new device with ID: {reading_data.device_id}")
 
         if not device:
             # Create new device
-            device = Device(device_id=device_id)
+            device = Device(device_id=reading_data.device_id)
             self.session.add(device)
             await self.session.commit()
             await self.session.refresh(device)
