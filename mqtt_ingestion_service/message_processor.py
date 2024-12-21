@@ -4,7 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 from sqlalchemy.ext.asyncio import AsyncSession
-# from shared.models import Device, Reading
+from shared.models import Device, Reading
 from sqlalchemy.future import select
 from datetime import datetime
 
