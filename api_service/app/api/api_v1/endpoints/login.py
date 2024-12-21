@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.security import create_access_token
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user
 from app.crud import user as crud_user
 from app.schemas.token import Token
 
