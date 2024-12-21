@@ -83,13 +83,13 @@ async def read_user_me(
     
     return user
 
-@router.get("/me/devices")
+@router.get("/me/devices", response_model=List[DeviceOut])
 async def read_user_devices(
     *,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     pagination: Annotated[PaginationParams, Depends(get_pagination)]
-) -> List[dict]:
+) -> List[DeviceOut]:
     """
     Get current user's devices.
     
@@ -99,7 +99,7 @@ async def read_user_devices(
         pagination: Pagination parameters
         
     Returns:
-        List[dict]: List of user's devices
+        List[DeviceOut]: List of user's devices
     """
     devices = await crud_user.get_devices(
         db,
