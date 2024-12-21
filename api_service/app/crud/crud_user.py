@@ -218,16 +218,25 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             List[Device]: List of user's devices
         """
         from app.models.device import Device
-        from sqlalchemy import select
-
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.debug(f"Getting devices for user_id={user_id}, active_only={active_only}, skip={skip}, limit={limit}")
+        
+        # Get devices with pagination
         query = select(Device).where(Device.owner_id == user_id)
         
         if active_only:
             query = query.where(Device.is_active == True)
         
         query = query.offset(skip).limit(limit)
+        logger.debug(f"Query: {query}")
+        
         result = await db.execute(query)
-        return list(result.scalars().all())
+        devices = list(result.scalars().all())
+        logger.debug(f"Found {len(devices)} devices")
+        
+        return devices
 
     async def deactivate(
         self,
