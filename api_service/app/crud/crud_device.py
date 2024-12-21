@@ -20,7 +20,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
     CRUD operations for Device model.
     Inherits basic CRUD operations from CRUDBase.
     """
-    
+
     async def create_with_owner(
         self,
         db: AsyncSession,
@@ -190,7 +190,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         device = await self.get(db, id=id)
         if not device:
             return None
-        
+
         device.is_active = False
         await db.commit()
         await db.refresh(device)
