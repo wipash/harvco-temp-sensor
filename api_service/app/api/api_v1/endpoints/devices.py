@@ -87,32 +87,6 @@ async def read_devices(
     )
     return devices
 
-@router.get("/stats")
-async def read_devices_with_stats(
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    pagination: Annotated[PaginationParams, Depends(get_pagination)],
-    include_inactive: bool = Query(False, description="Include inactive devices")
-) -> List[dict]:
-    """
-    Retrieve devices with their statistics.
-    
-    Args:
-        db: Database session
-        current_user: Current authenticated user
-        pagination: Pagination parameters
-        include_inactive: Whether to include inactive devices
-        
-    Returns:
-        List[dict]: List of devices with their statistics
-    """
-    return await crud_device.get_multi_by_owner_with_stats(
-        db,
-        owner_id=current_user.id,
-        skip=pagination.skip,
-        limit=pagination.limit,
-        include_inactive=include_inactive
-    )
 
 @router.get("/{device_id}", response_model=DeviceOut)
 async def read_device(

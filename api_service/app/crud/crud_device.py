@@ -214,50 +214,6 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         return device
 
 
-    async def get_multi_by_owner_with_stats(
-        self,
-        db: AsyncSession,
-        *,
-        owner_id: int,
-        skip: int = 0,
-        limit: int = 100,
-        include_inactive: bool = False
-    ) -> List[Dict[str, Any]]:
-        """
-        Get multiple devices with their statistics.
-
-        Args:
-            db: Database session
-            owner_id: Owner ID
-            skip: Number of records to skip
-            limit: Maximum number of records to return
-            include_inactive: Whether to include inactive devices
-
-        Returns:
-            List[Dict[str, Any]]: List of devices with their statistics
-        """
-        # Get devices
-        query = select(Device).where(Device.owner_id == owner_id)
-        if not include_inactive:
-            query = query.where(Device.is_active == True)
-        query = query.offset(skip).limit(limit)
-        
-        result = await db.execute(query)
-        devices = list(result.scalars().all())
-
-        # Get stats for each device
-        devices_with_stats = []
-        for device in devices:
-            stats = await self.get_device_stats(db, device_id=device.id)
-            devices_with_stats.append({
-                "id": device.id,
-                "device_id": device.device_id,
-                "name": device.name,
-                "is_active": device.is_active,
-                "stats": stats
-            })
-
-        return devices_with_stats
 
     async def bulk_update_status(
         self,
