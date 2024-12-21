@@ -15,7 +15,7 @@ class MessageProcessor:
             # Check if device exists
         result = await self.session.execute(select(Device).filter_by(device_id=device_id))
         device = result.scalars().first()
-                
+
         if not device:
             logging.info(f"Creating new device with ID: {reading_data.device_id}")
             device = Device(device_id=reading_data.device_id)
@@ -30,7 +30,7 @@ class MessageProcessor:
             logging.error(f"An unexpected error occurred: {e}")
             raise
             await self.session.refresh(device)
-                
+
         if not device:
             logging.info(f"Creating new device with ID: {reading_data.device_id}")
 
@@ -44,7 +44,7 @@ class MessageProcessor:
         # Create new reading
         if reading_data.timestamp is None:
             reading_data.timestamp = datetime.utcnow()
-                
+
         logging.info(f"Recording new reading for device ID: {device.id}")
         reading = Reading(
             device_id=device.id,
