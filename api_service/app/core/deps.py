@@ -30,15 +30,12 @@ oauth2_scheme = OAuth2PasswordBearer(
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency that provides an async database session.
-
+    
     Yields:
         AsyncSession: Database session
     """
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+    async for session in get_session():
+        yield session
 
 async def get_current_user(
     db: AsyncSession = Depends(get_db),
