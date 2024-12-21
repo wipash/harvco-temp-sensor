@@ -5,13 +5,14 @@ This module implements Create, Read, Update, Delete operations for devices using
 the repository pattern.
 """
 
-from typing import Optional, List
-from sqlalchemy import select, func
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timedelta
+from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.device import Device
-from app.models.user import User
+from app.models.reading import Reading, ReadingType
 from app.schemas.device import DeviceCreate, DeviceUpdate
 from app.crud.base import CRUDBase
 
@@ -211,6 +212,186 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         await db.commit()
         await db.refresh(device)
         return device
+
+    async def get_device_stats(
+        self,
+        db: AsyncSession,
+        *,
+        device_id: int,
+        reading_type: Optional[ReadingType] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ) -> Dict[str, Any]:
+        """
+        Get statistics for a device's readings.
+
+        Args:
+            db: Database session
+            device_id: Device ID
+            reading_type: Optional type of reading to filter
+            start_date: Optional start date for filtering
+            end_date: Optional end date for filtering
+
+        Returns:
+            Dict[str, Any]: Device statistics including reading counts and latest values
+        """
+        query = select(
+            func.count(Reading.id).label("total_readings"),
+            func.min(Reading.value).label("min_value"),
+            func.max(Reading.value).label("max_value"),
+            func.avg(Reading.value).label("avg_value")
+        ).where(Reading.device_id == device_id)
+
+        if reading_type:
+            query = query.where(Reading.reading_type == reading_type)
+        if start_date:
+            query = query.where(Reading.timestamp >= start_date)
+        if end_date:
+            query = query.where(Reading.timestamp <= end_date)
+
+        result = await db.execute(query)
+        stats = result.one()
+
+        # Get latest reading
+        latest_query = (
+            select(Reading)
+            .where(Reading.device_id == device_id)
+            .order_by(Reading.timestamp.desc())
+            .limit(1)
+        )
+        if reading_type:
+            latest_query = latest_query.where(Reading.reading_type == reading_type)
+        
+        latest_result = await db.execute(latest_query)
+        latest_reading = latest_result.scalar_one_or_none()
+
+        return {
+            "total_readings": stats.total_readings,
+            "min_value": float(stats.min_value) if stats.min_value is not None else None,
+            "max_value": float(stats.max_value) if stats.max_value is not None else None,
+            "avg_value": float(stats.avg_value) if stats.avg_value is not None else None,
+            "latest_reading": {
+                "value": latest_reading.value,
+                "timestamp": latest_reading.timestamp
+            } if latest_reading else None
+        }
+
+    async def get_multi_by_owner_with_stats(
+        self,
+        db: AsyncSession,
+        *,
+        owner_id: int,
+        skip: int = 0,
+        limit: int = 100,
+        include_inactive: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Get multiple devices with their statistics.
+
+        Args:
+            db: Database session
+            owner_id: Owner ID
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+            include_inactive: Whether to include inactive devices
+
+        Returns:
+            List[Dict[str, Any]]: List of devices with their statistics
+        """
+        # Get devices
+        query = select(Device).where(Device.owner_id == owner_id)
+        if not include_inactive:
+            query = query.where(Device.is_active == True)
+        query = query.offset(skip).limit(limit)
+        
+        result = await db.execute(query)
+        devices = list(result.scalars().all())
+
+        # Get stats for each device
+        devices_with_stats = []
+        for device in devices:
+            stats = await self.get_device_stats(db, device_id=device.id)
+            devices_with_stats.append({
+                "id": device.id,
+                "device_id": device.device_id,
+                "name": device.name,
+                "is_active": device.is_active,
+                "stats": stats
+            })
+
+        return devices_with_stats
+
+    async def bulk_update_status(
+        self,
+        db: AsyncSession,
+        *,
+        device_ids: List[int],
+        is_active: bool
+    ) -> List[Device]:
+        """
+        Bulk update the active status of multiple devices.
+
+        Args:
+            db: Database session
+            device_ids: List of device IDs to update
+            is_active: New active status
+
+        Returns:
+            List[Device]: List of updated devices
+        """
+        query = (
+            select(Device)
+            .where(Device.id.in_(device_ids))
+        )
+        result = await db.execute(query)
+        devices = list(result.scalars().all())
+
+        for device in devices:
+            device.is_active = is_active
+
+        await db.commit()
+        for device in devices:
+            await db.refresh(device)
+
+        return devices
+
+    async def get_inactive_devices(
+        self,
+        db: AsyncSession,
+        *,
+        min_inactive_days: int = 30
+    ) -> List[Device]:
+        """
+        Get devices that haven't sent readings for a specified period.
+
+        Args:
+            db: Database session
+            min_inactive_days: Minimum days of inactivity
+
+        Returns:
+            List[Device]: List of inactive devices
+        """
+        cutoff_date = datetime.utcnow() - timedelta(days=min_inactive_days)
+        
+        subquery = (
+            select(Reading.device_id)
+            .where(Reading.timestamp >= cutoff_date)
+            .group_by(Reading.device_id)
+            .scalar_subquery()
+        )
+
+        query = (
+            select(Device)
+            .where(
+                and_(
+                    Device.is_active == True,
+                    Device.id.notin_(subquery)
+                )
+            )
+        )
+
+        result = await db.execute(query)
+        return list(result.scalars().all())
 
 # Create singleton instance for use across the application
 device = CRUDDevice(Device)
