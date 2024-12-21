@@ -57,7 +57,11 @@ class MQTTClientService:
                     try:
                         # Extract device ID and reading type from topic
                         device_id = self.parse_device_id(topic)
-                        reading_type = self.parse_reading_type(topic)
+                        try:
+                            reading_type = self.parse_reading_type(topic)
+                        except ValueError:
+                            # Skip non-reading topics
+                            continue
 
                         # Parse payload as float, set to None if invalid
                         try:
@@ -73,14 +77,14 @@ class MQTTClientService:
                             "timestamp": datetime.utcnow()
                         }
 
-                    reading = ReadingCreate(**reading_data)
+                        reading = ReadingCreate(**reading_data)
 
-                    if value is not None:  # Only process if we got a valid numeric reading
-                        logger.info(f"Worker {worker_id}: Processing {reading_type} reading for device {device_id}")
-                        await message_processor.process_message(reading)
-                        logger.info(f"Worker {worker_id}: Successfully processed {reading_type} reading for device {device_id}")
-                    else:
-                        logger.warning(f"Worker {worker_id}: Skipping invalid {reading_type} reading for device {device_id}")
+                        if value is not None:  # Only process if we got a valid numeric reading
+                            logger.info(f"Worker {worker_id}: Processing {reading_type} reading for device {device_id}")
+                            await message_processor.process_message(reading)
+                            logger.info(f"Worker {worker_id}: Successfully processed {reading_type} reading for device {device_id}")
+                        else:
+                            logger.warning(f"Worker {worker_id}: Skipping invalid {reading_type} reading for device {device_id}")
                 except ValueError as e:
                     logger.error(f"Worker {worker_id}: Topic parsing error: {str(e)}")
                 except Exception as e:
