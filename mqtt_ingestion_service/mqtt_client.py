@@ -1,4 +1,4 @@
-from asyncio_mqtt import Client as MQTTClient
+from aiomqtt import Client as MQTTClient
 from config import Settings
 from message_processor import MessageProcessor
 import logging
