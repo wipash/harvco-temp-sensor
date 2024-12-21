@@ -3,6 +3,8 @@ from config import Settings
 from message_processor import MessageProcessor
 import logging
 import asyncio
+from typing import List
+from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +20,33 @@ class MQTTClientService:
         self.settings = settings
         self.message_processor = message_processor
 
-    async def subscribe(self) -> None:
-        """Subscribe to MQTT topics and process incoming messages."""
+    async def message_worker(self, client, worker_id: int) -> None:
+        """Worker task to process messages concurrently."""
+        try:
+            async for message in client.messages:
+                topic = message.topic.value
+                payload = message.payload.decode()
+                logger.debug(f"Worker {worker_id}: Received message on topic {topic}: {payload}")
+                
+                try:
+                    logger.info(f"Worker {worker_id}: Processing message from topic {topic}")
+                    await self.message_processor.process_message(topic, payload)
+                    logger.info(f"Worker {worker_id}: Successfully processed message from topic {topic}")
+                except Exception as e:
+                    logger.error(f"Worker {worker_id}: Failed to process message from topic {topic}: {str(e)}")
+        except asyncio.CancelledError:
+            logger.info(f"Worker {worker_id}: Shutting down")
+            raise
+        except Exception as e:
+            logger.error(f"Worker {worker_id}: Unexpected error: {str(e)}")
+            raise
+
+    async def subscribe(self, num_workers: int = 2) -> None:
+        """Subscribe to MQTT topics and process incoming messages using multiple workers.
+        
+        Args:
+            num_workers (int): Number of concurrent message processing workers
+        """
         while True:
             try:
                 logger.info("Connecting to MQTT broker at %s:%d",
@@ -36,19 +63,10 @@ class MQTTClientService:
                     await client.subscribe(self.settings.MQTT_TOPIC)
                     logger.info("Subscribed to topic %s", self.settings.MQTT_TOPIC)
 
-                    async with client.unfiltered_messages() as messages:
-                        async for message in messages:
-                            topic = message.topic
-                            payload = message.payload.decode()
-                            logger.debug("Received message on topic %s: %s", topic, payload)
-
-                            try:
-                                logger.info("Processing message from topic %s", topic)
-                                await self.message_processor.process_message(topic, payload)
-                                logger.info("Successfully processed message from topic %s", topic)
-                            except Exception as e:
-                                logger.error("Failed to process message from topic %s: %s", topic, str(e))
-                                continue  # Continue processing next message even if this one fails
+                    # Use TaskGroup to manage multiple worker tasks
+                    async with asyncio.TaskGroup() as tg:
+                        for i in range(num_workers):
+                            tg.create_task(self.message_worker(client, i))
 
             except ConnectionError as e:
                 logger.error("MQTT connection error: %s", str(e))
