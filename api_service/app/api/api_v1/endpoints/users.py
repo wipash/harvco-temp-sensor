@@ -21,6 +21,7 @@ from app.api.deps import (
 from app.crud import user as crud_user
 from app.models.user import User
 from app.schemas.user import UserCreate, UserOut, UserWithDevices
+from app.schemas.device import DeviceOut
 
 router = APIRouter()
 
