@@ -29,16 +29,11 @@ class MessageProcessor:
             logging.error(f"Database error occurred: {e}")
             raise
         except Exception as e:
+            await self.session.rollback()
             logging.error(f"An unexpected error occurred: {e}")
             raise
 
 
-        if not device:
-            # Create new device
-            device = Device(device_id=reading_data.device_id)
-            self.session.add(device)
-            await self.session.commit()
-            await self.session.refresh(device)
 
         # Create new reading
         if reading_data.timestamp is None:
