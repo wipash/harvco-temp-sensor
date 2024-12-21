@@ -63,9 +63,16 @@ class MQTTClientService:
                             # Skip non-reading topics
                             continue
 
-                        # Parse payload as float, set to None if invalid
+                        # Parse payload as float, set to None if invalid or NaN
                         try:
-                            value = float(payload)
+                            if payload.lower() == 'nan':
+                                logger.debug(f"Worker {worker_id}: Skipping NaN value from {topic}")
+                                value = None
+                            else:
+                                value = float(payload)
+                                if value != value:  # Additional NaN check for float values
+                                    logger.debug(f"Worker {worker_id}: Skipping NaN value from {topic}")
+                                    value = None
                         except ValueError:
                             logger.warning(f"Worker {worker_id}: Non-numeric payload received: {payload}")
                             value = None
