@@ -3,6 +3,10 @@ from config import Settings
 from message_processor import MessageProcessor
 import logging
 import asyncio
+import re
+from schemas import ReadingCreate
+import json
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -20,28 +24,51 @@ class MQTTClientService:
         self.settings = settings
         self.message_processor = message_processor
 
+    def parse_device_id(self, topic: str) -> str:
+        """Extract device ID from MQTT topic.
+        
+        Example: "harvco/harvco-temp-sensor-62ba71/sensor/temperature/state" -> "62ba71"
+        """
+        pattern = r"harvco/harvco-temp-sensor-([^/]+)/sensor/temperature/state"
+        match = re.match(pattern, topic)
+        if not match:
+            raise ValueError(f"Invalid topic format: {topic}")
+        return match.group(1)
+
     async def message_worker(self, client, worker_id: int) -> None:
         """Worker task to process messages concurrently."""
         try:
             async for message in client.messages:
                 topic = message.topic.value
                 payload = message.payload.decode()
-                logger.debug(
-                    f"Worker {worker_id}: Received message on topic {topic}: {payload}"
-                )
-
+                logger.debug(f"Worker {worker_id}: Received message on topic {topic}: {payload}")
+                
                 try:
-                    logger.info(
-                        f"Worker {worker_id}: Processing message from topic {topic}"
+                    # Extract device ID from topic
+                    device_id = self.parse_device_id(topic)
+                    
+                    # Parse payload (assuming JSON with temperature)
+                    try:
+                        data = json.loads(payload)
+                        temperature = float(data.get('temperature', data))  # Handle both {"temperature": 20.5} and direct value
+                    except (json.JSONDecodeError, ValueError) as e:
+                        logger.error(f"Worker {worker_id}: Invalid payload format: {str(e)}")
+                        continue
+
+                    # Create reading object
+                    reading = ReadingCreate(
+                        device_id=device_id,
+                        temperature=temperature,
+                        timestamp=datetime.utcnow()
                     )
-                    await self.message_processor.process_message(topic, payload)
-                    logger.info(
-                        f"Worker {worker_id}: Successfully processed message from topic {topic}"
-                    )
+
+                    logger.info(f"Worker {worker_id}: Processing message for device {device_id}")
+                    await self.message_processor.process_message(reading)
+                    logger.info(f"Worker {worker_id}: Successfully processed message for device {device_id}")
+                except ValueError as e:
+                    logger.error(f"Worker {worker_id}: Topic parsing error: {str(e)}")
                 except Exception as e:
-                    logger.error(
-                        f"Worker {worker_id}: Failed to process message from topic {topic}: {str(e)}"
-                    )
+                    logger.error(f"Worker {worker_id}: Failed to process message from topic {topic}: {str(e)}")
         except asyncio.CancelledError:
             logger.info(f"Worker {worker_id}: Shutting down")
             raise
