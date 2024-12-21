@@ -20,7 +20,8 @@ class MQTTClientService:
 
     async def subscribe(self) -> None:
             """Subscribe to MQTT topics and process incoming messages."""
-            try:
+            while True:
+                try:
                 logger.info("Connecting to MQTT broker at %s:%d", self.settings.MQTT_BROKER_URL, self.settings.MQTT_BROKER_PORT)
                 async with MQTTClient(
                     hostname=self.settings.MQTT_BROKER_URL,
