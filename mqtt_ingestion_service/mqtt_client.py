@@ -3,13 +3,13 @@ from config import Settings
 from message_processor import MessageProcessor
 import logging
 import asyncio
-from typing import List
-from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
+
 class MQTTClientService:
     """Service for managing MQTT connections and processing messages."""
+
     def __init__(self, settings: Settings, message_processor: MessageProcessor) -> None:
         """Initialize the MQTTClientService.
 
@@ -26,14 +26,22 @@ class MQTTClientService:
             async for message in client.messages:
                 topic = message.topic.value
                 payload = message.payload.decode()
-                logger.debug(f"Worker {worker_id}: Received message on topic {topic}: {payload}")
-                
+                logger.debug(
+                    f"Worker {worker_id}: Received message on topic {topic}: {payload}"
+                )
+
                 try:
-                    logger.info(f"Worker {worker_id}: Processing message from topic {topic}")
+                    logger.info(
+                        f"Worker {worker_id}: Processing message from topic {topic}"
+                    )
                     await self.message_processor.process_message(topic, payload)
-                    logger.info(f"Worker {worker_id}: Successfully processed message from topic {topic}")
+                    logger.info(
+                        f"Worker {worker_id}: Successfully processed message from topic {topic}"
+                    )
                 except Exception as e:
-                    logger.error(f"Worker {worker_id}: Failed to process message from topic {topic}: {str(e)}")
+                    logger.error(
+                        f"Worker {worker_id}: Failed to process message from topic {topic}: {str(e)}"
+                    )
         except asyncio.CancelledError:
             logger.info(f"Worker {worker_id}: Shutting down")
             raise
@@ -43,15 +51,17 @@ class MQTTClientService:
 
     async def subscribe(self, num_workers: int = 2) -> None:
         """Subscribe to MQTT topics and process incoming messages using multiple workers.
-        
+
         Args:
             num_workers (int): Number of concurrent message processing workers
         """
         while True:
             try:
-                logger.info("Connecting to MQTT broker at %s:%d",
-                           self.settings.MQTT_BROKER_URL,
-                           self.settings.MQTT_BROKER_PORT)
+                logger.info(
+                    "Connecting to MQTT broker at %s:%d",
+                    self.settings.MQTT_BROKER_URL,
+                    self.settings.MQTT_BROKER_PORT,
+                )
 
                 async with MQTTClient(
                     hostname=self.settings.MQTT_BROKER_URL,
@@ -77,6 +87,8 @@ class MQTTClientService:
                 logger.error("Unexpected error in MQTT client: %s", str(e))
 
             # Wait before reconnection attempt
-            logger.info("Waiting %d seconds before reconnection attempt",
-                       self.settings.RECONNECT_INTERVAL)
+            logger.info(
+                "Waiting %d seconds before reconnection attempt",
+                self.settings.RECONNECT_INTERVAL,
+            )
             await asyncio.sleep(self.settings.RECONNECT_INTERVAL)
