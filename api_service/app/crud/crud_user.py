@@ -21,8 +21,18 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     Inherits basic CRUD operations from CRUDBase.
     """
 
-    # Make sure to expose the get method from the base class
-    get = CRUDBase.get
+    async def get(self, db: AsyncSession, id: Any) -> Optional[User]:
+        """
+        Get a user by ID.
+
+        Args:
+            db: Database session
+            id: User ID
+
+        Returns:
+            Optional[User]: Found user or None
+        """
+        return await super().get(db, id=id)
 
     async def get_by_email(
         self,

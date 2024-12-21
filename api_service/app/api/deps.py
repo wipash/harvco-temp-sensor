@@ -19,7 +19,7 @@ import jwt
 from app.db import get_session
 from app.core import security
 from app.core.config import settings
-from app.crud import crud_user
+from app.crud.crud_user import user as crud_user
 from app.models.user import User
 
 # OAuth2 scheme for token authentication
