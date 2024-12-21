@@ -200,7 +200,9 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         db: AsyncSession,
         *,
         user_id: int,
-        active_only: bool = True
+        active_only: bool = True,
+        skip: int = 0,
+        limit: int = 100
     ) -> List[Any]:
         """
         Get all devices belonging to a user.
@@ -209,17 +211,23 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             db: Database session
             user_id: User ID
             active_only: If True, return only active devices
+            skip: Number of records to skip
+            limit: Maximum number of records to return
 
         Returns:
             List[Device]: List of user's devices
         """
-        user = await self.get(db, id=user_id)
-        if not user:
-            return []
+        from app.models.device import Device
+        from sqlalchemy import select
 
+        query = select(Device).where(Device.owner_id == user_id)
+        
         if active_only:
-            return [device for device in user.devices if device.is_active]
-        return user.devices
+            query = query.where(Device.is_active == True)
+        
+        query = query.offset(skip).limit(limit)
+        result = await db.execute(query)
+        return list(result.scalars().all())
 
     async def deactivate(
         self,
