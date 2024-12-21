@@ -6,13 +6,11 @@ from mqtt_client import MQTTClientService
 
 async def main():
     try:
-        async with AsyncSessionFactory() as session:
-            message_processor = MessageProcessor(session=session)
-            mqtt_service = MQTTClientService(
-                settings=settings,
-                message_processor=message_processor
-            )
-            await mqtt_service.subscribe()
+        mqtt_service = MQTTClientService(
+            settings=settings,
+            session_factory=AsyncSessionFactory
+        )
+        await mqtt_service.subscribe()
     finally:
         await cleanup_database()
 

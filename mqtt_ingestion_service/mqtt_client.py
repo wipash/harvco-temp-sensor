@@ -13,15 +13,15 @@ logger = logging.getLogger(__name__)
 class MQTTClientService:
     """Service for managing MQTT connections and processing messages."""
 
-    def __init__(self, settings: Settings, message_processor: MessageProcessor) -> None:
+    def __init__(self, settings: Settings, session_factory) -> None:
         """Initialize the MQTTClientService.
 
         Args:
             settings (Settings): Configuration settings.
-            message_processor (MessageProcessor): Processor for handling incoming messages.
+            session_factory: AsyncSession factory function
         """
         self.settings = settings
-        self.message_processor = message_processor
+        self.session_factory = session_factory
 
     def parse_device_id(self, topic: str) -> str:
         """Extract device ID from MQTT topic.
@@ -36,21 +36,25 @@ class MQTTClientService:
 
     def parse_reading_type(self, topic: str) -> str:
         """Extract reading type (temperature or humidity) from topic."""
-        pattern = r"harvco/harvco-temp-sensor-[^/]+/sensor/([^/]+)/state"
-        match = re.match(pattern, topic)
-        if not match:
+        if "temperature" in topic:
+            return "temperature"
+        elif "humidity" in topic:
+            return "humidity"
+        else:
+            # Skip other topics like _devicename
             raise ValueError(f"Invalid topic format: {topic}")
-        return match.group(1)
 
     async def message_worker(self, client, worker_id: int) -> None:
         """Worker task to process messages concurrently."""
-        try:
-            async for message in client.messages:
-                topic = message.topic.value
-                payload = message.payload.decode()
-                logger.debug(f"Worker {worker_id}: Received message on topic {topic}: {payload}")
+        async with self.session_factory() as session:
+            message_processor = MessageProcessor(session=session)
+            try:
+                async for message in client.messages:
+                    topic = message.topic.value
+                    payload = message.payload.decode()
+                    logger.debug(f"Worker {worker_id}: Received message on topic {topic}: {payload}")
 
-                try:
+                    try:
                     # Extract device ID and reading type from topic
                     device_id = self.parse_device_id(topic)
                     reading_type = self.parse_reading_type(topic)
@@ -73,7 +77,7 @@ class MQTTClientService:
 
                     if value is not None:  # Only process if we got a valid numeric reading
                         logger.info(f"Worker {worker_id}: Processing {reading_type} reading for device {device_id}")
-                        await self.message_processor.process_message(reading)
+                        await message_processor.process_message(reading)
                         logger.info(f"Worker {worker_id}: Successfully processed {reading_type} reading for device {device_id}")
                     else:
                         logger.warning(f"Worker {worker_id}: Skipping invalid {reading_type} reading for device {device_id}")
