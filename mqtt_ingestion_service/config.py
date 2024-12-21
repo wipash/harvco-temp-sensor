@@ -4,19 +4,24 @@ Configuration management for the MQTT Ingestion Service.
 This module defines the Config class, which loads configuration from environment variables.
 """
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
+from typing import Optional
 
-class Config(BaseSettings):
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
     # MQTT broker configuration
-    mqtt_broker_host: str
-    mqtt_broker_port: int = 1883  # Default MQTT port
-    mqtt_username: str
-    mqtt_password: str
+    MQTT_BROKER_URL: str = Field(...)
 
-    # Database configuration
-    database_url: str
+    MQTT_BROKER_PORT: int = Field(default=1883)
+    MQTT_USERNAME: Optional[str] = Field(default=None)
+    MQTT_PASSWORD: Optional[str] = Field(default=None)
+    MQTT_TOPIC: str = Field(default='+/sensor/temperature/state')
 
-    class Config:
-        env_file = '.env'  # Specifies the environment file
+    # Database Settings
+    DATABASE_URL: str = Field(...)
 
-config = Config()
+    # Logging Settings
+    LOG_LEVEL: str = Field(default='INFO')
+
+settings = Settings()

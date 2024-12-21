@@ -1,0 +1,7 @@
+{
+    "python.testing.pytestArgs": [
+        "mqtt_ingestion_service"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}

@@ -1,0 +1,22 @@
+- **Type Annotations**: Use type annotations consistently throughout the codebase for variables, function parameters, and return types.
+- **Asynchronous Code**: Use `async` and `await` for all I/O-bound operations, following best practices for asynchronous programming.
+- **Coding Style**: Adhere to PEP 8 style guidelines.
+- **HTTP Requests**: Prefer using `httpx` over `requests` for asynchronous HTTP requests if needed.
+- **Dependency Injection**: Pass dependencies explicitly to functions and classes rather than using global variables or singletons.
+- **Pydantic Models**: Use Pydantic models for data validation and settings management.
+- **Logging**: Use the `logging` module instead of `print` statements. Configure different log levels and outputs as appropriate.
+- **Exception Handling**: Handle exceptions gracefully, providing meaningful error messages and not exposing sensitive information.
+- **Docstrings and Comments**: Write clear and concise docstrings for all modules, classes, and functions using the Google style.
+- **Import Order**: Follow PEP 8 guidelines for import ordering: standard library imports, third-party imports, local application imports.
+- **Testing**: Write unit tests for all functions and classes. Use mocks to simulate external dependencies.
+- **String Formatting**: Use f-strings for formatting strings.
+- **Comprehensions**: Prefer list comprehensions and generator expressions where appropriate for readability and efficiency.
+- **Context Managers**: Use context managers (`with` statements) for resource management (e.g., opening files, database sessions).
+- **Avoid Global State**: Do not use global variables; pass necessary data and dependencies explicitly.
+- **Immutable Defaults**: Do not use mutable default arguments in function definitions.
+- **Naming Conventions**: Use descriptive variable and function names following snake_case conventions.
+- **Thread Safety**: Ensure code is thread-safe when dealing with shared resources, even though `asyncio` uses a single-threaded event loop.
+- **Constants**: Define constants in uppercase letters, and group them together at the top of modules or in a separate `constants.py` file.
+- **Error Handling**: Do not catch broad exceptions like `Exception` or `BaseException` unless necessary. Catch specific exceptions.
+- **Environmental Configuration**: Do not hardcode configuration values; use environment variables or configuration files.
+- **Documentation**: Maintain up-to-date documentation in `README.md` and docstrings.
