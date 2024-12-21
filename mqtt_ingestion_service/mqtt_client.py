@@ -85,10 +85,11 @@ class MQTTClientService:
                             logger.info(f"Worker {worker_id}: Successfully processed {reading_type} reading for device {device_id}")
                         else:
                             logger.warning(f"Worker {worker_id}: Skipping invalid {reading_type} reading for device {device_id}")
-                except ValueError as e:
-                    logger.error(f"Worker {worker_id}: Topic parsing error: {str(e)}")
-                except Exception as e:
-                    logger.error(f"Worker {worker_id}: Failed to process message from topic {topic}: {str(e)}")
+
+                    except ValueError as e:
+                        logger.error(f"Worker {worker_id}: Topic parsing error: {str(e)}")
+                    except Exception as e:
+                        logger.error(f"Worker {worker_id}: Failed to process message from topic {topic}: {str(e)}")
         except asyncio.CancelledError:
             logger.info(f"Worker {worker_id}: Shutting down")
             raise
