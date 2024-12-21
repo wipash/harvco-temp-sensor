@@ -67,6 +67,7 @@ async def read_user_me(
     Returns:
         User: Current user with their devices
     """
+    # Explicitly load the devices relationship with all columns
     query = (
         select(User)
         .options(selectinload(User.devices))
@@ -74,6 +75,12 @@ async def read_user_me(
     )
     result = await db.execute(query)
     user = result.scalar_one()
+    
+    # Ensure devices have is_active set
+    for device in user.devices:
+        if device.is_active is None:
+            device.is_active = True
+    
     return user
 
 @router.get("/me/devices")
