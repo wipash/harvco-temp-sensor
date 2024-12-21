@@ -164,18 +164,23 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         # Handle None and NaN values
         def safe_float(value: Any) -> Optional[float]:
             if value is None:
-                return None
+                return 0.0
             try:
                 float_val = float(value)
                 # Check for NaN
-                return None if float_val != float_val else float_val
+                return 0.0 if float_val != float_val else float_val
             except (ValueError, TypeError):
-                return None
+                return 0.0
+
+        # Only use fallback if the value is None or NaN
+        min_val = safe_float(stats.min)
+        max_val = safe_float(stats.max)
+        avg_val = safe_float(stats.avg)
 
         return {
-            "min": safe_float(stats.min) or 0.0,
-            "max": safe_float(stats.max) or 0.0,
-            "avg": safe_float(stats.avg) or 0.0,
+            "min": min_val,
+            "max": max_val,
+            "avg": avg_val,
             "count": int(stats.count)
         }
 
