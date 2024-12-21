@@ -20,7 +20,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     CRUD operations for User model.
     Inherits basic CRUD operations from CRUDBase.
     """
-    
+
     async def get_by_email(
         self,
         db: AsyncSession,
@@ -144,10 +144,10 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             List[User]: List of users with devices
         """
         query = select(User).options(selectinload(User.devices))
-        
+
         if active_only:
             query = query.where(User.is_active == True)
-            
+
         query = query.offset(skip).limit(limit)
         result = await db.execute(query)
         return list(result.scalars().all())
@@ -203,7 +203,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         user = await self.get(db, id=user_id)
         if not user:
             return []
-            
+
         if active_only:
             return [device for device in user.devices if device.is_active]
         return user.devices
