@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     # Logging Settings
     LOG_LEVEL: str = Field(default='INFO')
+
     # SQLAlchemy Settings
     SQLALCHEMY_ECHO: bool = Field(default=False, description="Enable SQLAlchemy echo for debugging SQL queries")
     RECONNECT_INTERVAL: int = Field(default=5, description="Interval in seconds before reconnecting after a connection loss")
