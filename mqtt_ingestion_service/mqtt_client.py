@@ -60,7 +60,8 @@ class MQTTClientService:
                         try:
                             reading_type = self.parse_reading_type(topic)
                         except ValueError:
-                            # Skip non-reading topics
+                            # Skip non-reading topics (like _devicename) - log as debug since this is expected
+                            logger.debug(f"Worker {worker_id}: Skipping non-reading topic: {topic}")
                             continue
 
                         # Parse payload as float, set to None if invalid or NaN
@@ -74,7 +75,7 @@ class MQTTClientService:
                                     logger.debug(f"Worker {worker_id}: Skipping NaN value from {topic}")
                                     value = None
                         except ValueError:
-                            logger.warning(f"Worker {worker_id}: Non-numeric payload received: {payload}")
+                            logger.debug(f"Worker {worker_id}: Non-numeric payload received: {payload}")
                             value = None
 
                         reading_data = {
@@ -84,17 +85,23 @@ class MQTTClientService:
                             "timestamp": datetime.utcnow()
                         }
 
-                        reading = ReadingCreate(**reading_data)
-
-                        if value is not None:  # Only process if we got a valid numeric reading
-                            logger.info(f"Worker {worker_id}: Processing {reading_type} reading for device {device_id}")
-                            await message_processor.process_message(reading)
-                            logger.info(f"Worker {worker_id}: Successfully processed {reading_type} reading for device {device_id}")
-                        else:
-                            logger.warning(f"Worker {worker_id}: Skipping invalid {reading_type} reading for device {device_id}")
+                        try:
+                            reading = ReadingCreate(**reading_data)
+                            if value is not None:  # Only process if we got a valid numeric reading
+                                logger.info(f"Worker {worker_id}: Processing {reading_type} reading for device {device_id}")
+                                await message_processor.process_message(reading)
+                                logger.info(f"Worker {worker_id}: Successfully processed {reading_type} reading for device {device_id}")
+                            else:
+                                logger.debug(f"Worker {worker_id}: Skipping invalid {reading_type} reading for device {device_id}")
+                        except ValueError as e:
+                            logger.debug(f"Worker {worker_id}: Skipping invalid reading data: {str(e)}")
 
                     except ValueError as e:
-                        logger.error(f"Worker {worker_id}: Topic parsing error: {str(e)}")
+                        # Only log as error if it's an unexpected topic format
+                        if "_devicename" in topic:
+                            logger.debug(f"Worker {worker_id}: Skipping devicename topic: {topic}")
+                        else:
+                            logger.error(f"Worker {worker_id}: Topic parsing error: {str(e)}")
                     except Exception as e:
                         logger.error(f"Worker {worker_id}: Failed to process message from topic {topic}: {str(e)}")
 

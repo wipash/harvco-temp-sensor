@@ -5,7 +5,7 @@ from models.reading import ReadingType
 
 class ReadingBase(BaseModel):
     reading_type: ReadingType
-    value: float
+    value: Optional[float] = None
     timestamp: Optional[datetime] = None
 
 class ReadingCreate(ReadingBase):
