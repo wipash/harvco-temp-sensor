@@ -218,6 +218,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             List[Device]: List of user's devices
         """
         from app.models.device import Device
+        from sqlalchemy import or_
         import logging
         logger = logging.getLogger(__name__)
         
@@ -227,7 +228,8 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         query = select(Device).where(Device.owner_id == user_id)
         
         if active_only:
-            query = query.where(Device.is_active == True)
+            # Include devices where is_active is True OR None
+            query = query.where(or_(Device.is_active == True, Device.is_active == None))
         
         query = query.offset(skip).limit(limit)
         logger.debug(f"Query: {query}")
