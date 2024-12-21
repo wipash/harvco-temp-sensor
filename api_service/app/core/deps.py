@@ -16,7 +16,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 import jwt
 
-from app.db import AsyncSessionLocal, get_session
+from app.db import get_session
 from app.core import security
 from app.core.config import settings
 from app.crud import crud_user
@@ -30,7 +30,7 @@ oauth2_scheme = OAuth2PasswordBearer(
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency that provides an async database session.
-    
+
     Yields:
         AsyncSession: Database session
     """

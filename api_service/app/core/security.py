@@ -3,7 +3,6 @@ from typing import Any, Optional
 
 import jwt
 from passlib.context import CryptContext
-from pydantic import SecretStr
 
 from app.core.config import settings
 
