@@ -141,6 +141,9 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         Returns:
             dict: Statistics including min, max, avg
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         query = select(
             func.min(Reading.value).label("min"),
             func.max(Reading.value).label("max"),
@@ -161,28 +164,40 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         result = await db.execute(query)
         stats = result.one()
         
+        logger.debug(f"Raw stats from database: min={stats.min}, max={stats.max}, avg={stats.avg}, count={stats.count}")
+        
         # Handle None and NaN values
-        def safe_float(value: Any) -> Optional[float]:
+        def safe_float(value: Any, label: str) -> float:
+            logger.debug(f"Converting {label}: {value} (type: {type(value)})")
             if value is None:
+                logger.debug(f"{label} is None, returning 0.0")
                 return 0.0
             try:
                 float_val = float(value)
                 # Check for NaN
-                return 0.0 if float_val != float_val else float_val
-            except (ValueError, TypeError):
+                if float_val != float_val:  # NaN check
+                    logger.debug(f"{label} is NaN, returning 0.0")
+                    return 0.0
+                logger.debug(f"{label} converted to: {float_val}")
+                return float_val
+            except (ValueError, TypeError) as e:
+                logger.debug(f"Error converting {label}: {str(e)}")
                 return 0.0
 
-        # Only use fallback if the value is None or NaN
-        min_val = safe_float(stats.min)
-        max_val = safe_float(stats.max)
-        avg_val = safe_float(stats.avg)
+        # Convert values with logging
+        min_val = safe_float(stats.min, "min")
+        max_val = safe_float(stats.max, "max")
+        avg_val = safe_float(stats.avg, "avg")
 
-        return {
+        result = {
             "min": min_val,
             "max": max_val,
             "avg": avg_val,
             "count": int(stats.count)
         }
+        
+        logger.debug(f"Final result: {result}")
+        return result
 
     async def get_readings_by_type(
         self,
