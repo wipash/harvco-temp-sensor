@@ -60,11 +60,11 @@ class MQTTClientService:
                         reading_type = self.parse_reading_type(topic)
 
                         # Parse payload as float, set to None if invalid
-                    try:
-                        value = float(payload)
-                    except ValueError:
-                        logger.warning(f"Worker {worker_id}: Non-numeric payload received: {payload}")
-                        value = None
+                        try:
+                            value = float(payload)
+                        except ValueError:
+                            logger.warning(f"Worker {worker_id}: Non-numeric payload received: {payload}")
+                            value = None
 
                     reading_data = {
                         "device_id": device_id,
