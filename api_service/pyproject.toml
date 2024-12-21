@@ -1,0 +1,14 @@
+[project]
+name = "api-service"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "asyncpg>=0.30.0",
+    "fastapi>=0.115.6",
+    "pydantic-settings>=2.7.0",
+    "pydantic[email]>=2.10.4",
+    "ruff>=0.8.4",
+    "sqlalchemy[asyncio]>=2.0.36",
+]
