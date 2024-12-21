@@ -254,10 +254,18 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         query = (
             select(
                 Reading.device_id,
-                func.avg(Reading.value).label("average")
+                func.avg(Reading.value).label("average"),
+                func.count(Reading.value).label("count")
             )
-            .where(Reading.reading_type == reading_type)
+            .where(
+                and_(
+                    Reading.reading_type == reading_type,
+                    Reading.value.isnot(None),  # Exclude NULL values
+                    Reading.value != float('nan')  # Exclude NaN values
+                )
+            )
             .group_by(Reading.device_id)
+            .having(func.count(Reading.value) > 0)  # Only include devices with readings
         )
 
         if start_date:
@@ -266,18 +274,13 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             query = query.where(Reading.timestamp <= end_date)
 
         result = await db.execute(query)
+        rows = result.all()
         
-        def safe_float(value: Any) -> float:
-            if value is None:
-                return 0.0
-            try:
-                float_val = float(value)
-                # Check for NaN
-                return 0.0 if float_val != float_val else float_val
-            except (ValueError, TypeError):
-                return 0.0
-
-        return [(r.device_id, safe_float(r.average)) for r in result.all()]
+        # Convert to list of tuples, handling NULL averages
+        return [
+            (r.device_id, float(r.average) if r.average is not None else 0.0)
+            for r in rows
+        ]
 
 # Create singleton instance for use across the application
 reading = CRUDReading(Reading)

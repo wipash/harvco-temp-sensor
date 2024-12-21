@@ -178,10 +178,10 @@ async def get_device_averages(
     Returns:
         List[dict]: List of device averages
     """
-    # First, get the user's devices IDs using an async query
-    query = select(Device.id).where(Device.owner_id == current_user.id)
-    result = await db.execute(query)
-    user_devices = set(row[0] for row in result.all())
+    # First, get all the user's devices
+    devices_query = select(Device).where(Device.owner_id == current_user.id)
+    result = await db.execute(devices_query)
+    user_devices = {device.id: device.device_id for device in result.scalars().all()}
     
     averages = await crud_reading.get_device_averages(
         db,
@@ -190,9 +190,13 @@ async def get_device_averages(
         end_date=date_range.end_date
     )
     
-    # Filter to only include devices owned by the user
+    # Filter and format the response
     filtered_averages = [
-        {"device_id": device_id, "average": avg}
+        {
+            "device_id": user_devices[device_id],  # Use the device_id string
+            "internal_id": device_id,              # Include the internal ID
+            "average": avg
+        }
         for device_id, avg in averages
         if device_id in user_devices
     ]
