@@ -14,3 +14,6 @@ class Reading(Base):
     reading_type = Column(Enum(ReadingType), nullable=False)
     value = Column(Float, nullable=False)
     timestamp = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    
+    # Relationships
+    device = relationship("Device", back_populates="readings")

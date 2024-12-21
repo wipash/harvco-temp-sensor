@@ -48,56 +48,72 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         await db.refresh(db_obj)
         return db_obj
 
-    async def get_by_serial_number(
+    async def get_by_device_id(
         self,
         db: AsyncSession,
         *,
-        serial_number: str
+        device_id: str
     ) -> Optional[Device]:
         """
-        Get a device by its serial number.
+        Get a device by its device_id.
 
         Args:
             db: Database session
-            serial_number: Device serial number
+            device_id: Device identifier
 
         Returns:
             Optional[Device]: Found device or None
         """
-        query = select(Device).where(Device.serial_number == serial_number)
+        query = select(Device).where(Device.device_id == device_id)
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_multi_by_owner(
+    async def get_multi_by_owner_with_filters(
         self,
         db: AsyncSession,
         *,
         owner_id: int,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
+        active_only: bool = True,
+        with_latest_reading: bool = False
     ) -> List[Device]:
         """
-        Get multiple devices belonging to an owner.
+        Get multiple devices belonging to an owner with filters.
 
         Args:
             db: Database session
             owner_id: ID of the owner
             skip: Number of records to skip
             limit: Maximum number of records to return
+            active_only: If True, return only active devices
+            with_latest_reading: If True, include latest reading
 
         Returns:
             List[Device]: List of devices
         """
-        query = (
-            select(Device)
-            .where(Device.owner_id == owner_id)
-            .offset(skip)
-            .limit(limit)
-        )
+        query = select(Device).where(Device.owner_id == owner_id)
+        
+        if active_only:
+            query = query.where(Device.is_active == True)
+            
+        if with_latest_reading:
+            from app.models.reading import Reading
+            query = query.options(
+                selectinload(
+                    Device.readings.and_(
+                        Reading.timestamp == select(func.max(Reading.timestamp))
+                        .where(Reading.device_id == Device.id)
+                        .scalar_subquery()
+                    )
+                )
+            )
+            
+        query = query.offset(skip).limit(limit)
         result = await db.execute(query)
         return list(result.scalars().all())
 
-    async def get_with_readings(
+    async def get_with_latest_reading(
         self,
         db: AsyncSession,
         *,
