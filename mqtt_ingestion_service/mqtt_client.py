@@ -55,11 +55,11 @@ class MQTTClientService:
                     logger.debug(f"Worker {worker_id}: Received message on topic {topic}: {payload}")
 
                     try:
-                    # Extract device ID and reading type from topic
-                    device_id = self.parse_device_id(topic)
-                    reading_type = self.parse_reading_type(topic)
+                        # Extract device ID and reading type from topic
+                        device_id = self.parse_device_id(topic)
+                        reading_type = self.parse_reading_type(topic)
 
-                    # Parse payload as float, set to None if invalid
+                        # Parse payload as float, set to None if invalid
                     try:
                         value = float(payload)
                     except ValueError:
