@@ -20,17 +20,20 @@ class MQTTClientService:
 
     async def subscribe(self) -> None:
             """Subscribe to MQTT topics and process incoming messages."""
-        async with MQTTClient(
-            hostname=self.settings.MQTT_BROKER_URL,
-            port=self.settings.MQTT_BROKER_PORT,
-            username=self.settings.MQTT_USERNAME,
-            password=self.settings.MQTT_PASSWORD,
-        ) as client:
+            try:
+                logger.info("Connecting to MQTT broker at %s:%d", self.settings.MQTT_BROKER_URL, self.settings.MQTT_BROKER_PORT)
+                async with MQTTClient(
+                    hostname=self.settings.MQTT_BROKER_URL,
+                    port=self.settings.MQTT_BROKER_PORT,
+                    username=self.settings.MQTT_USERNAME,
+                    password=self.settings.MQTT_PASSWORD,
+                ) as client:
             logger.info("Connected to MQTT broker")
             await client.subscribe(self.settings.MQTT_TOPIC)
             logger.info("Subscribed to topic %s", self.settings.MQTT_TOPIC)
             async with client.unfiltered_messages() as messages:
-                async for message in messages:
+                try:
+                    async for message in messages:
                     topic = message.topic
                     payload = message.payload.decode()
                     logger.debug("Received message on topic %s: %s", topic, payload)
