@@ -16,7 +16,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 import jwt
 
-from app.db import AsyncSessionLocal
+from app.db import AsyncSessionLocal, get_session
 from app.core import security
 from app.core.config import settings
 from app.crud import crud_user
