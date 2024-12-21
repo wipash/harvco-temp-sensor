@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr
+from .device import DeviceOut  # Import DeviceOut schema
 
 class UserBase(BaseModel):
     """Base User schema with common attributes."""
@@ -27,7 +28,7 @@ class UserOut(UserBase):
 
 class UserWithDevices(UserOut):
     """Schema for user output data including devices."""
-    devices: list["DeviceOut"] = []
+    devices: List[DeviceOut] = []
 
     class Config:
         from_attributes = True
