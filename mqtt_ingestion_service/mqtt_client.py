@@ -63,11 +63,10 @@ class MQTTClientService:
                         logger.warning(f"Worker {worker_id}: Non-numeric payload received: {payload}")
                         value = None
 
-                    # Create reading object with either temperature or humidity
                     reading_data = {
                         "device_id": device_id,
-                        "temperature": value if reading_type == "temperature" else None,
-                        "humidity": value if reading_type == "humidity" else None,
+                        "reading_type": reading_type,
+                        "value": value,
                         "timestamp": datetime.utcnow()
                     }
 

@@ -25,21 +25,21 @@ class MessageProcessor:
                 self.session.add(device)
                 await self.session.commit()
 
-            # Only create reading if we have either temperature or humidity
-            if reading_data.temperature is not None or reading_data.humidity is not None:
+            if reading_data.value is not None:
                 if reading_data.timestamp is None:
                     reading_data.timestamp = datetime.utcnow()
 
-                logging.info(f"Recording new reading for device ID: {device.id}")
+                logging.info(f"Recording new {reading_data.reading_type} reading for device ID: {device.id}")
                 reading = Reading(
                     device_id=device.id,
-                    temperature=reading_data.temperature,
+                    reading_type=reading_data.reading_type,
+                    value=reading_data.value,
                     timestamp=reading_data.timestamp
                 )
                 self.session.add(reading)
                 await self.session.commit()
             else:
-                logging.warning("Skipping reading creation - no valid temperature or humidity data")
+                logging.warning(f"Skipping reading creation - no valid {reading_data.reading_type} data")
 
         except SQLAlchemyError as e:
             await self.session.rollback()
