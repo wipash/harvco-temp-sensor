@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     MQTT_BROKER_PORT: int = Field(default=1883)
     MQTT_USERNAME: Optional[str] = Field(default=None)
     MQTT_PASSWORD: Optional[str] = Field(default=None)
-    MQTT_TOPIC: str = Field(default='harvco/+/sensor/temperature/state')
+    MQTT_TOPIC: str = Field(default='harvco/+/sensor/+/state')
 
     # Database Settings
     DATABASE_URL: str = Field(...)

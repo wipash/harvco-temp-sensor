@@ -26,10 +26,18 @@ class MQTTClientService:
 
     def parse_device_id(self, topic: str) -> str:
         """Extract device ID from MQTT topic.
-
+    
         Example: "harvco/harvco-temp-sensor-62ba71/sensor/temperature/state" -> "62ba71"
         """
-        pattern = r"harvco/harvco-temp-sensor-([^/]+)/sensor/temperature/state"
+        pattern = r"harvco/harvco-temp-sensor-([^/]+)/sensor/(?:temperature|humidity)/state"
+        match = re.match(pattern, topic)
+        if not match:
+            raise ValueError(f"Invalid topic format: {topic}")
+        return match.group(1)
+
+    def parse_reading_type(self, topic: str) -> str:
+        """Extract reading type (temperature or humidity) from topic."""
+        pattern = r"harvco/harvco-temp-sensor-[^/]+/sensor/([^/]+)/state"
         match = re.match(pattern, topic)
         if not match:
             raise ValueError(f"Invalid topic format: {topic}")
@@ -42,31 +50,30 @@ class MQTTClientService:
                 topic = message.topic.value
                 payload = message.payload.decode()
                 logger.debug(f"Worker {worker_id}: Received message on topic {topic}: {payload}")
-
+                
                 try:
-                    # Extract device ID from topic
+                    # Extract device ID and reading type from topic
                     device_id = self.parse_device_id(topic)
-
-                    # Parse payload (assuming JSON with temperature)
+                    reading_type = self.parse_reading_type(topic)
+                    
+                    # Parse payload as float
                     try:
-                        data = json.loads(payload)
-                        temperature = float(data.get('temperature', None))
-                        humidity = float(data.get('humidity', None))
-                    except (json.JSONDecodeError, ValueError) as e:
-                        logger.error(f"Worker {worker_id}: Invalid payload format: {str(e)}")
+                        value = float(payload)
+                    except ValueError as e:
+                        logger.error(f"Worker {worker_id}: Invalid payload format - expected number, got: {payload}")
                         continue
 
-                    # Create reading object
+                    # Create reading object with either temperature or humidity
                     reading = ReadingCreate(
                         device_id=device_id,
-                        temperature=temperature,
-                        humidity=humidity,
+                        temperature=value if reading_type == "temperature" else None,
+                        humidity=value if reading_type == "humidity" else None,
                         timestamp=datetime.utcnow()
                     )
 
-                    logger.info(f"Worker {worker_id}: Processing message for device {device_id}")
+                    logger.info(f"Worker {worker_id}: Processing {reading_type} reading for device {device_id}")
                     await self.message_processor.process_message(reading)
-                    logger.info(f"Worker {worker_id}: Successfully processed message for device {device_id}")
+                    logger.info(f"Worker {worker_id}: Successfully processed {reading_type} reading for device {device_id}")
                 except ValueError as e:
                     logger.error(f"Worker {worker_id}: Topic parsing error: {str(e)}")
                 except Exception as e:
