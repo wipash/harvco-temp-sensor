@@ -7,6 +7,8 @@ This module provides endpoints for retrieving sensor readings.
 from typing import List, Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.models.device import Device
 
 from app.api.deps import (
     get_db,
@@ -176,6 +178,11 @@ async def get_device_averages(
     Returns:
         List[dict]: List of device averages
     """
+    # First, get the user's devices IDs using an async query
+    query = select(Device.id).where(Device.owner_id == current_user.id)
+    result = await db.execute(query)
+    user_devices = set(row[0] for row in result.all())
+    
     averages = await crud_reading.get_device_averages(
         db,
         reading_type=reading_type,
@@ -184,7 +191,6 @@ async def get_device_averages(
     )
     
     # Filter to only include devices owned by the user
-    user_devices = set(device.id for device in current_user.devices)
     filtered_averages = [
         {"device_id": device_id, "average": avg}
         for device_id, avg in averages
