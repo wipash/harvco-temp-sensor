@@ -26,7 +26,7 @@ class MQTTClientService:
 
     def parse_device_id(self, topic: str) -> str:
         """Extract device ID from MQTT topic.
-        
+
         Example: "harvco/harvco-temp-sensor-62ba71/sensor/temperature/state" -> "62ba71"
         """
         pattern = r"harvco/harvco-temp-sensor-([^/]+)/sensor/temperature/state"
@@ -42,15 +42,16 @@ class MQTTClientService:
                 topic = message.topic.value
                 payload = message.payload.decode()
                 logger.debug(f"Worker {worker_id}: Received message on topic {topic}: {payload}")
-                
+
                 try:
                     # Extract device ID from topic
                     device_id = self.parse_device_id(topic)
-                    
+
                     # Parse payload (assuming JSON with temperature)
                     try:
                         data = json.loads(payload)
-                        temperature = float(data.get('temperature', data))  # Handle both {"temperature": 20.5} and direct value
+                        temperature = float(data.get('temperature', None))
+                        humidity = float(data.get('humidity', None))
                     except (json.JSONDecodeError, ValueError) as e:
                         logger.error(f"Worker {worker_id}: Invalid payload format: {str(e)}")
                         continue
@@ -59,6 +60,7 @@ class MQTTClientService:
                     reading = ReadingCreate(
                         device_id=device_id,
                         temperature=temperature,
+                        humidity=humidity,
                         timestamp=datetime.utcnow()
                     )
 
