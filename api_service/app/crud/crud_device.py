@@ -235,13 +235,15 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         Returns:
             Dict[str, Any]: Device statistics including reading counts and latest values
         """
-        from sqlalchemy import and_, func, not_
+        from sqlalchemy import and_, func, text
         
         # Base query filtering out NULL and NaN values
+        # In PostgreSQL, we can check for NaN using 'value = value'
+        # (NaN is the only floating-point value where x = x is false)
         base_conditions = [
             Reading.device_id == device_id,
             Reading.value.isnot(None),  # Filter out NULL values
-            not_(func.isnan(Reading.value))  # Filter out NaN values
+            Reading.value == Reading.value  # Filter out NaN values
         ]
 
         if reading_type:
@@ -279,7 +281,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
                 return None
             try:
                 float_val = float(value)
-                return float_val if not float_val.is_nan() else None
+                return float_val if float_val == float_val else None  # NaN check
             except (ValueError, TypeError):
                 return None
 
