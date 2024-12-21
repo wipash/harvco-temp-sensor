@@ -90,12 +90,13 @@ class MQTTClientService:
                         logger.error(f"Worker {worker_id}: Topic parsing error: {str(e)}")
                     except Exception as e:
                         logger.error(f"Worker {worker_id}: Failed to process message from topic {topic}: {str(e)}")
-        except asyncio.CancelledError:
-            logger.info(f"Worker {worker_id}: Shutting down")
-            raise
-        except Exception as e:
-            logger.error(f"Worker {worker_id}: Unexpected error: {str(e)}")
-            raise
+
+            except asyncio.CancelledError:
+                logger.info(f"Worker {worker_id}: Shutting down")
+                raise
+            except Exception as e:
+                logger.error(f"Worker {worker_id}: Unexpected error: {str(e)}")
+                raise
 
     async def subscribe(self, num_workers: int = 2) -> None:
         """Subscribe to MQTT topics and process incoming messages using multiple workers.
