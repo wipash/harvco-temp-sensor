@@ -23,5 +23,7 @@ class Settings(BaseSettings):
 
     # Logging Settings
     LOG_LEVEL: str = Field(default='INFO')
+    # SQLAlchemy Settings
+    SQLALCHEMY_ECHO: bool = Field(default=False, description="Enable SQLAlchemy echo for debugging SQL queries")
 
 settings = Settings()
