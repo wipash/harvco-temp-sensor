@@ -1,10 +1,10 @@
-from shared.schemas import ReadingCreate
+from schemas import ReadingCreate
 import logging
 from sqlalchemy.exc import SQLAlchemyError
 
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from shared.models import Device, Reading
+from models import Device, Reading
 from sqlalchemy.future import select
 from datetime import datetime
 
