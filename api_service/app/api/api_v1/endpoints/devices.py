@@ -147,42 +147,6 @@ async def read_device(
         )
     return device
 
-@router.get("/{device_id}/stats")
-async def read_device_stats(
-    device_id: int,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    date_range: Annotated[DateRangeParams, Depends(get_date_range)],
-    reading_type: Optional[ReadingType] = None
-) -> dict:
-    """
-    Get device statistics.
-    
-    Args:
-        device_id: Device ID
-        db: Database session
-        current_user: Current authenticated user
-        date_range: Date range for statistics
-        reading_type: Optional reading type filter
-        
-    Returns:
-        dict: Device statistics
-        
-    Raises:
-        HTTPException: If device not found or user doesn't own it
-    """
-    if not await crud_device.is_owner(db, device_id=device_id, user_id=current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    return await crud_device.get_device_stats(
-        db,
-        device_id=device_id,
-        reading_type=reading_type,
-        start_date=date_range.start_date,
-        end_date=date_range.end_date
-    )
 
 @router.put("/{device_id}", response_model=DeviceOut)
 async def update_device(

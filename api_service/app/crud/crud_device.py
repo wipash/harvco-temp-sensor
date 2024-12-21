@@ -213,61 +213,6 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         await db.refresh(device)
         return device
 
-    async def get_device_stats(
-        self,
-        db: AsyncSession,
-        *,
-        device_id: int,
-        reading_type: Optional[ReadingType] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
-    ) -> Dict[str, Any]:
-        """
-        Get statistics for a device's readings.
-
-        Args:
-            db: Database session
-            device_id: Device ID
-            reading_type: Optional type of reading to filter
-            start_date: Optional start date for filtering
-            end_date: Optional end date for filtering
-
-        Returns:
-            Dict[str, Any]: Device statistics including reading counts and latest values
-        """
-        from app.crud.crud_reading import reading as crud_reading
-        import logging
-        logger = logging.getLogger(__name__)
-
-        # Get statistics using the reading CRUD method
-        stats = await crud_reading.get_statistics(
-            db,
-            device_id=device_id,
-            reading_type=reading_type,
-            start_date=start_date,
-            end_date=end_date
-        )
-
-        # Get latest reading using the reading CRUD method
-        latest_reading = await crud_reading.get_latest_by_device(
-            db,
-            device_id=device_id,
-            reading_type=reading_type
-        )
-
-        result = {
-            "total_readings": stats["count"],
-            "min_value": stats["min"],
-            "max_value": stats["max"],
-            "avg_value": stats["avg"],
-            "latest_reading": {
-                "value": latest_reading.value if latest_reading else None,
-                "timestamp": latest_reading.timestamp if latest_reading else None
-            } if latest_reading else None
-        }
-        
-        logger.debug(f"Final processed stats: {result}")
-        return result
 
     async def get_multi_by_owner_with_stats(
         self,
