@@ -1,4 +1,6 @@
 from shared.schemas import ReadingCreate
+import logging
+from sqlalchemy.exc import SQLAlchemyError
 
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,4 +55,4 @@ class MessageProcessor:
         )
         self.session.add(reading)
         await self.session.commit()
-        import datetime
+        from datetime import datetime
