@@ -5,7 +5,7 @@ This module implements Create, Read, Update, Delete operations for sensor readin
 the repository pattern.
 """
 
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from datetime import datetime
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -161,10 +161,21 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         result = await db.execute(query)
         stats = result.one()
         
+        # Handle None and NaN values
+        def safe_float(value: Any) -> Optional[float]:
+            if value is None:
+                return None
+            try:
+                float_val = float(value)
+                # Check for NaN
+                return None if float_val != float_val else float_val
+            except (ValueError, TypeError):
+                return None
+
         return {
-            "min": float(stats.min) if stats.min is not None else 0.0,
-            "max": float(stats.max) if stats.max is not None else 0.0,
-            "avg": float(stats.avg) if stats.avg is not None else 0.0,
+            "min": safe_float(stats.min) or 0.0,
+            "max": safe_float(stats.max) or 0.0,
+            "avg": safe_float(stats.avg) or 0.0,
             "count": int(stats.count)
         }
 
@@ -238,7 +249,18 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             query = query.where(Reading.timestamp <= end_date)
 
         result = await db.execute(query)
-        return [(r.device_id, float(r.average)) for r in result.all()]
+        
+        def safe_float(value: Any) -> float:
+            if value is None:
+                return 0.0
+            try:
+                float_val = float(value)
+                # Check for NaN
+                return 0.0 if float_val != float_val else float_val
+            except (ValueError, TypeError):
+                return 0.0
+
+        return [(r.device_id, safe_float(r.average)) for r in result.all()]
 
 # Create singleton instance for use across the application
 reading = CRUDReading(Reading)
