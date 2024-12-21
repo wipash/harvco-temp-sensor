@@ -235,15 +235,14 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         Returns:
             Dict[str, Any]: Device statistics including reading counts and latest values
         """
-        from sqlalchemy import and_, func, text
+        from sqlalchemy import and_, func, text, case
+        import logging
+        logger = logging.getLogger(__name__)
         
-        # Base query filtering out NULL and NaN values
-        # In PostgreSQL, we can check for NaN using 'value = value'
-        # (NaN is the only floating-point value where x = x is false)
+        # Base query filtering out NULL values only first
         base_conditions = [
             Reading.device_id == device_id,
-            Reading.value.isnot(None),  # Filter out NULL values
-            Reading.value == Reading.value  # Filter out NaN values
+            Reading.value.isnot(None)  # Filter out NULL values
         ]
 
         if reading_type:
@@ -253,21 +252,39 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         if end_date:
             base_conditions.append(Reading.timestamp <= end_date)
 
-        # Query for statistics with NULL/NaN filtering
+        # Query for statistics
         query = select(
             func.count(Reading.id).label("total_readings"),
-            func.min(Reading.value).label("min_value"),
-            func.max(Reading.value).label("max_value"),
-            func.avg(Reading.value).label("avg_value")
+            func.min(case(
+                (Reading.value == Reading.value, Reading.value),
+                else_=None
+            )).label("min_value"),
+            func.max(case(
+                (Reading.value == Reading.value, Reading.value),
+                else_=None
+            )).label("max_value"),
+            func.avg(case(
+                (Reading.value == Reading.value, Reading.value),
+                else_=None
+            )).label("avg_value")
         ).where(and_(*base_conditions))
 
+        logger.debug(f"Statistics query: {query}")
+        
         result = await db.execute(query)
         stats = result.one()
+        
+        logger.debug(f"Raw database stats: {stats}")
 
-        # Get latest reading
+        # Get latest valid reading
         latest_query = (
             select(Reading)
-            .where(and_(*base_conditions))
+            .where(
+                and_(
+                    *base_conditions,
+                    Reading.value == Reading.value  # Add NaN filter for latest reading
+                )
+            )
             .order_by(Reading.timestamp.desc())
             .limit(1)
         )
@@ -275,23 +292,26 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         latest_result = await db.execute(latest_query)
         latest_reading = latest_result.scalar_one_or_none()
 
-        # Helper function to safely convert values
-        def safe_float(value) -> Optional[float]:
+        # Helper function to safely convert values with default
+        def safe_float(value, default: float = 0.0) -> float:
             if value is None:
-                return None
+                return default
             try:
                 float_val = float(value)
-                return float_val if float_val == float_val else None  # NaN check
+                if float_val != float_val:  # NaN check
+                    return default
+                return float_val
             except (ValueError, TypeError):
-                return None
+                return default
 
-        # Process statistics, ensuring we have valid numbers
-        min_val = safe_float(stats.min_value)
-        max_val = safe_float(stats.max_value)
-        avg_val = safe_float(stats.avg_value)
+        # Process statistics, using 0.0 as default for empty sets
+        total_readings = int(stats.total_readings or 0)
+        min_val = safe_float(stats.min_value, 0.0 if total_readings == 0 else None)
+        max_val = safe_float(stats.max_value, 0.0 if total_readings == 0 else None)
+        avg_val = safe_float(stats.avg_value, 0.0 if total_readings == 0 else None)
 
-        return {
-            "total_readings": stats.total_readings,
+        result = {
+            "total_readings": total_readings,
             "min_value": min_val,
             "max_value": max_val,
             "avg_value": avg_val,
@@ -300,6 +320,9 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
                 "timestamp": latest_reading.timestamp if latest_reading else None
             } if latest_reading else None
         }
+        
+        logger.debug(f"Final processed stats: {result}")
+        return result
 
     async def get_multi_by_owner_with_stats(
         self,
