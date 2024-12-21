@@ -218,7 +218,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             List[Device]: List of user's devices
         """
         from app.models.device import Device
-        from sqlalchemy import or_
+        from sqlalchemy import or_, select
         import logging
         logger = logging.getLogger(__name__)
         
@@ -237,6 +237,12 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         result = await db.execute(query)
         devices = list(result.scalars().all())
         logger.debug(f"Found {len(devices)} devices")
+        
+        # Ensure is_active is a boolean for each device
+        for device in devices:
+            if device.is_active is None:
+                device.is_active = True  # Set default value
+                await db.commit()  # Save the change to database
         
         return devices
 
