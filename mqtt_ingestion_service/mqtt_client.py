@@ -66,12 +66,12 @@ class MQTTClientService:
                             logger.warning(f"Worker {worker_id}: Non-numeric payload received: {payload}")
                             value = None
 
-                    reading_data = {
-                        "device_id": device_id,
-                        "reading_type": reading_type,
-                        "value": value,
-                        "timestamp": datetime.utcnow()
-                    }
+                        reading_data = {
+                            "device_id": device_id,
+                            "reading_type": reading_type,
+                            "value": value,
+                            "timestamp": datetime.utcnow()
+                        }
 
                     reading = ReadingCreate(**reading_data)
 
