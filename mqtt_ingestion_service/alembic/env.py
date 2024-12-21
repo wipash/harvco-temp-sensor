@@ -1,6 +1,7 @@
 import asyncio
 from logging.config import fileConfig
 import os
+from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -13,17 +14,15 @@ from models.reading import Reading
 from models.device import Device
 from models.user import User
 
+load_dotenv(override=True)
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # Set up database URL from environment variables
 section = config.config_ini_section
-config.set_section_option(section, "DB_USER", os.getenv("DB_USER", "postgres"))
-config.set_section_option(section, "DB_PASS", os.getenv("DB_PASSWORD", "postgres"))
-config.set_section_option(section, "DB_HOST", os.getenv("DB_HOST", "localhost"))
-config.set_section_option(section, "DB_PORT", os.getenv("DB_PORT", "5432"))
-config.set_section_option(section, "DB_NAME", os.getenv("DB_NAME", "temperature_db"))
+config.set_section_option(section, "sqlalchemy.url", os.getenv("DATABASE_URL"))
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
