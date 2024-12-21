@@ -7,7 +7,9 @@ This module provides endpoints for user registration and management.
 from typing import List, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import (
     get_db,
@@ -52,18 +54,27 @@ async def create_user(
 
 @router.get("/me", response_model=UserWithDevices)
 async def read_user_me(
+    db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ) -> User:
     """
     Get current user.
     
     Args:
+        db: Database session
         current_user: Current authenticated user
         
     Returns:
         User: Current user with their devices
     """
-    return current_user
+    query = (
+        select(User)
+        .options(selectinload(User.devices))
+        .where(User.id == current_user.id)
+    )
+    result = await db.execute(query)
+    user = result.scalar_one()
+    return user
 
 @router.get("/me/devices")
 async def read_user_devices(
