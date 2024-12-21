@@ -235,86 +235,31 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         Returns:
             Dict[str, Any]: Device statistics including reading counts and latest values
         """
-        from sqlalchemy import and_, func, text, case
+        from app.crud.crud_reading import reading as crud_reading
         import logging
         logger = logging.getLogger(__name__)
-        
-        # Base query filtering out NULL values only first
-        base_conditions = [
-            Reading.device_id == device_id,
-            Reading.value.isnot(None)  # Filter out NULL values
-        ]
 
-        if reading_type:
-            base_conditions.append(Reading.reading_type == reading_type)
-        if start_date:
-            base_conditions.append(Reading.timestamp >= start_date)
-        if end_date:
-            base_conditions.append(Reading.timestamp <= end_date)
-
-        # Query for statistics
-        query = select(
-            func.count(Reading.id).label("total_readings"),
-            func.min(case(
-                (Reading.value == Reading.value, Reading.value),
-                else_=None
-            )).label("min_value"),
-            func.max(case(
-                (Reading.value == Reading.value, Reading.value),
-                else_=None
-            )).label("max_value"),
-            func.avg(case(
-                (Reading.value == Reading.value, Reading.value),
-                else_=None
-            )).label("avg_value")
-        ).where(and_(*base_conditions))
-
-        logger.debug(f"Statistics query: {query}")
-        
-        result = await db.execute(query)
-        stats = result.one()
-        
-        logger.debug(f"Raw database stats: {stats}")
-
-        # Get latest valid reading
-        latest_query = (
-            select(Reading)
-            .where(
-                and_(
-                    *base_conditions,
-                    Reading.value == Reading.value  # Add NaN filter for latest reading
-                )
-            )
-            .order_by(Reading.timestamp.desc())
-            .limit(1)
+        # Get statistics using the reading CRUD method
+        stats = await crud_reading.get_statistics(
+            db,
+            device_id=device_id,
+            reading_type=reading_type,
+            start_date=start_date,
+            end_date=end_date
         )
-        
-        latest_result = await db.execute(latest_query)
-        latest_reading = latest_result.scalar_one_or_none()
 
-        # Helper function to safely convert values with default
-        def safe_float(value, default: float = 0.0) -> float:
-            if value is None:
-                return default
-            try:
-                float_val = float(value)
-                if float_val != float_val:  # NaN check
-                    return default
-                return float_val
-            except (ValueError, TypeError):
-                return default
-
-        # Process statistics, using 0.0 as default for empty sets
-        total_readings = int(stats.total_readings or 0)
-        min_val = safe_float(stats.min_value, 0.0 if total_readings == 0 else None)
-        max_val = safe_float(stats.max_value, 0.0 if total_readings == 0 else None)
-        avg_val = safe_float(stats.avg_value, 0.0 if total_readings == 0 else None)
+        # Get latest reading using the reading CRUD method
+        latest_reading = await crud_reading.get_latest_by_device(
+            db,
+            device_id=device_id,
+            reading_type=reading_type
+        )
 
         result = {
-            "total_readings": total_readings,
-            "min_value": min_val,
-            "max_value": max_val,
-            "avg_value": avg_val,
+            "total_readings": stats["count"],
+            "min_value": stats["min"],
+            "max_value": stats["max"],
+            "avg_value": stats["avg"],
             "latest_reading": {
                 "value": latest_reading.value if latest_reading else None,
                 "timestamp": latest_reading.timestamp if latest_reading else None
