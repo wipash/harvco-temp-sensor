@@ -5,7 +5,6 @@ import logging
 import asyncio
 import re
 from schemas import ReadingCreate
-import json
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ class MQTTClientService:
 
     def parse_device_id(self, topic: str) -> str:
         """Extract device ID from MQTT topic.
-    
+
         Example: "harvco/harvco-temp-sensor-62ba71/sensor/temperature/state" -> "62ba71"
         """
         pattern = r"harvco/harvco-temp-sensor-([^/]+)/sensor/(?:temperature|humidity)/state"
@@ -50,12 +49,12 @@ class MQTTClientService:
                 topic = message.topic.value
                 payload = message.payload.decode()
                 logger.debug(f"Worker {worker_id}: Received message on topic {topic}: {payload}")
-                
+
                 try:
                     # Extract device ID and reading type from topic
                     device_id = self.parse_device_id(topic)
                     reading_type = self.parse_reading_type(topic)
-                    
+
                     # Parse payload as float, set to None if invalid
                     try:
                         value = float(payload)
@@ -71,7 +70,7 @@ class MQTTClientService:
                     }
 
                     reading = ReadingCreate(**reading_data)
-                    
+
                     if value is not None:  # Only process if we got a valid numeric reading
                         logger.info(f"Worker {worker_id}: Processing {reading_type} reading for device {device_id}")
                         await self.message_processor.process_message(reading)
