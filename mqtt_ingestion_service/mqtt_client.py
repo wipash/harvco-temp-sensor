@@ -22,10 +22,10 @@ class MQTTClientService:
         """Subscribe to MQTT topics and process incoming messages."""
         while True:
             try:
-                logger.info("Connecting to MQTT broker at %s:%d", 
-                           self.settings.MQTT_BROKER_URL, 
+                logger.info("Connecting to MQTT broker at %s:%d",
+                           self.settings.MQTT_BROKER_URL,
                            self.settings.MQTT_BROKER_PORT)
-                
+
                 async with MQTTClient(
                     hostname=self.settings.MQTT_BROKER_URL,
                     port=self.settings.MQTT_BROKER_PORT,
@@ -35,13 +35,13 @@ class MQTTClientService:
                     logger.info("Connected to MQTT broker")
                     await client.subscribe(self.settings.MQTT_TOPIC)
                     logger.info("Subscribed to topic %s", self.settings.MQTT_TOPIC)
-                    
+
                     async with client.unfiltered_messages() as messages:
                         async for message in messages:
                             topic = message.topic
                             payload = message.payload.decode()
                             logger.debug("Received message on topic %s: %s", topic, payload)
-                            
+
                             try:
                                 logger.info("Processing message from topic %s", topic)
                                 await self.message_processor.process_message(topic, payload)
@@ -49,7 +49,7 @@ class MQTTClientService:
                             except Exception as e:
                                 logger.error("Failed to process message from topic %s: %s", topic, str(e))
                                 continue  # Continue processing next message even if this one fails
-                                
+
             except ConnectionError as e:
                 logger.error("MQTT connection error: %s", str(e))
             except asyncio.CancelledError:
@@ -57,8 +57,8 @@ class MQTTClientService:
                 raise  # Re-raise to allow proper shutdown
             except Exception as e:
                 logger.error("Unexpected error in MQTT client: %s", str(e))
-            
+
             # Wait before reconnection attempt
-            logger.info("Waiting %d seconds before reconnection attempt", 
+            logger.info("Waiting %d seconds before reconnection attempt",
                        self.settings.RECONNECT_INTERVAL)
             await asyncio.sleep(self.settings.RECONNECT_INTERVAL)
