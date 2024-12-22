@@ -108,10 +108,10 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
     return readings
       .filter((reading) => reading.reading_type === type)
       .map((reading) => ({
-        timestamp: new Date(reading.timestamp),
+        timestamp: new Date(reading.timestamp).toLocaleString(), // Convert to local timezone string
         value: reading.value,
       }))
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
   }
 
   const fetchLatestReadings = useCallback(async (readingType: ReadingType) => {
@@ -168,7 +168,6 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
       return null
     }
 
-    const date = new Date(label)
     return (
       <div className="rounded-lg border bg-background p-2 shadow-sm">
         <div className="grid gap-2">
@@ -186,7 +185,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
               Time
             </span>
             <span className="font-bold tabular-nums">
-              {format(date, "MMM d, yyyy HH:mm:ss")}
+              {format(new Date(label), "MMM d, yyyy HH:mm:ss")}
             </span>
           </div>
         </div>
