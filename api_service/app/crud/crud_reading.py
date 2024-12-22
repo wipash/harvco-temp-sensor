@@ -68,7 +68,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         device_id: int,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-        reading_type: ReadingType,
+        reading_type: Optional[ReadingType] = None,
         threshold: int = 500  # Maximum number of readings before averaging
     ) -> List[Reading]:
         """
@@ -79,7 +79,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             device_id: Device ID
             start_date: Filter readings after this date
             end_date: Filter readings before this date
-            reading_type: Filter by reading type
+            reading_type: Optional reading type filter
             threshold: Maximum number of readings before averaging
 
         Returns:
@@ -89,13 +89,17 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         if start_date and end_date and (end_date - start_date > max_time_window):
             raise HTTPException(status_code=400, detail="Time window too large")
 
-        query = select(Reading).where(
-            and_(
-                Reading.device_id == device_id,
-                Reading.reading_type == reading_type.value,  # Convert enum to string value
-                self._valid_value_filters()
-            )
-        )
+        # Build base query with required filters
+        conditions = [
+            Reading.device_id == device_id,
+            self._valid_value_filters()
+        ]
+        
+        # Add reading_type filter if provided
+        if reading_type is not None:
+            conditions.append(Reading.reading_type == reading_type.value)
+
+        query = select(Reading).where(and_(*conditions))
 
         if start_date:
             query = query.where(Reading.timestamp >= start_date)
@@ -108,13 +112,10 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         readings = list(result.scalars().all())
 
         logger = logging.getLogger(__name__)
-        logger.setLevel(logging.DEBUG)  # Ensure debug logging is enabled
-        
         logger.info(f"Query executed for device_id={device_id}, reading_type={reading_type}")
         logger.info(f"Time range: {start_date} to {end_date}")
         logger.info(f"Found {len(readings)} readings")
 
-        # If no readings found, return empty list
         if not readings:
             logger.info("No readings found, returning empty list")
             return []
@@ -124,14 +125,20 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             logger.info(f"Under threshold ({threshold}), returning all readings")
             return readings
 
-        # If the number of readings exceeds the threshold, perform averaging
-        if len(readings) > threshold:
-            time_window = (end_date - start_date).total_seconds()
-            sampling_window_size = time_window / threshold
+        # Group readings by type for averaging
+        readings_by_type = {}
+        for reading in readings:
+            if reading.reading_type not in readings_by_type:
+                readings_by_type[reading.reading_type] = []
+            readings_by_type[reading.reading_type].append(reading)
 
-            averaged_readings = []
+        averaged_readings = []
+        time_window = (end_date - start_date).total_seconds()
+        sampling_window_size = time_window / threshold
+
+        # Average each reading type separately
+        for type_readings in readings_by_type.values():
             current_window_start = start_date
-            
             while current_window_start < end_date:
                 current_window_end = min(
                     current_window_start + timedelta(seconds=sampling_window_size),
@@ -139,7 +146,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
                 )
                 
                 window_readings = [
-                    r for r in readings 
+                    r for r in type_readings 
                     if current_window_start <= r.timestamp < current_window_end
                 ]
                 
@@ -154,15 +161,13 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
                         device_id=device_id,
                         timestamp=mid_timestamp,
                         value=avg_value,
-                        reading_type=reading_type  # Use the input reading_type
+                        reading_type=window_readings[0].reading_type  # Use the reading type from the group
                     ))
                 
                 current_window_start = current_window_end
 
-            logger.info(f"Created {len(averaged_readings)} averaged readings")
-            return averaged_readings
-
-        return readings
+        logger.info(f"Created {len(averaged_readings)} averaged readings")
+        return averaged_readings
 
     async def get_latest_by_device(
         self,
