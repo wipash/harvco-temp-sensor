@@ -66,6 +66,11 @@ async def test_engine():
 @pytest_asyncio.fixture
 async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
     """Create a test database session."""
+    # Create tables
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
+    # Create session
     async_session = sessionmaker(
         test_engine,
         class_=AsyncSession,
@@ -73,8 +78,13 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
     )
     
     async with async_session() as session:
-        yield session
-        await session.rollback()
+        try:
+            yield session
+        finally:
+            await session.rollback()
+            # Drop all tables after the test
+            async with test_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.drop_all)
 
 # Test data fixtures
 @pytest.fixture
