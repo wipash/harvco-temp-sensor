@@ -6,10 +6,11 @@ the repository pattern.
 """
 
 from typing import Optional, List, Any, Dict
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from fastapi import HTTPException
 
 from app.models.reading import Reading, ReadingType
 from app.schemas.reading import ReadingCreate, ReadingUpdate
@@ -55,11 +56,10 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         db: AsyncSession,
         *,
         device_id: int,
-        skip: int = 0,
-        limit: int = 100,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-        reading_type: Optional[ReadingType] = None
+        reading_type: ReadingType,
+        threshold: int = 1000  # Maximum number of readings before averaging
     ) -> List[Reading]:
         """
         Get readings for a specific device with filters.
@@ -67,15 +67,18 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         Args:
             db: Database session
             device_id: Device ID
-            skip: Number of records to skip
-            limit: Maximum number of records to return
             start_date: Filter readings after this date
             end_date: Filter readings before this date
             reading_type: Filter by reading type
+            threshold: Maximum number of readings before averaging
 
         Returns:
             List[Reading]: List of readings
         """
+        max_time_window = timedelta(days=30)
+        if start_date and end_date and (end_date - start_date > max_time_window):
+            raise HTTPException(status_code=400, detail="Time window too large")
+
         query = select(Reading).where(Reading.device_id == device_id)
 
         if start_date:
@@ -85,9 +88,51 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         if reading_type:
             query = query.where(Reading.reading_type == reading_type)
 
-        query = query.order_by(Reading.timestamp.desc()).offset(skip).limit(limit)
+        query = query.order_by(Reading.timestamp.desc())
         result = await db.execute(query)
-        return list(result.scalars().all())
+        readings = list(result.scalars().all())
+
+        # If the number of readings exceeds the threshold, perform averaging
+        if len(readings) > threshold:
+            time_window = (end_date - start_date).total_seconds()
+            sampling_window_size = time_window / threshold
+
+            averaged_readings: list[Reading] = []
+            current_window_start = start_date
+            current_window_end = start_date + timedelta(seconds=sampling_window_size)
+            current_window_readings = []
+
+            for reading in readings:
+                if reading.timestamp <= current_window_end:
+                    current_window_readings.append(reading)
+                else:
+                    if current_window_readings:
+                        avg_temp = sum(r.value for r in current_window_readings) / len(current_window_readings)
+                        averaged_readings.append(Reading(
+                            id=None,
+                            device_id=device_id,
+                            timestamp=current_window_end,
+                            value=avg_temp,
+                            reading_type=reading_type
+                        ))
+                    current_window_start = current_window_end
+                    current_window_end = current_window_start + timedelta(seconds=sampling_window_size)
+                    current_window_readings = [reading]
+
+            # Add the last window's average
+            if current_window_readings:
+                avg_temp = sum(r.value for r in current_window_readings) / len(current_window_readings)
+                averaged_readings.append(Reading(
+                    id=None,
+                    device_id=device_id,
+                    timestamp=current_window_end,
+                    value=avg_temp,
+                    reading_type=reading_type
+                ))
+
+            return averaged_readings
+
+        return readings
 
     async def get_latest_by_device(
         self,
@@ -111,10 +156,10 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             select(Reading)
             .where(Reading.device_id == device_id)
         )
-        
+
         if reading_type:
             query = query.where(Reading.reading_type == reading_type)
-            
+
         query = query.order_by(Reading.timestamp.desc()).limit(1)
         result = await db.execute(query)
         return result.scalar_one_or_none()
@@ -166,7 +211,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
 
         result = await db.execute(query)
         stats = result.one()
-        
+
         logger.debug(f"Raw stats from database: min={stats.min}, max={stats.max}, avg={stats.avg}, count={stats.count}")
 
         # Convert values, defaulting to None instead of 0.0 if no valid readings
@@ -192,7 +237,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             "avg": avg_val if avg_val is not None else 0.0,
             "count": int(stats.count)
         }
-        
+
         logger.debug(f"Final result: {result}")
         return result
 
@@ -275,7 +320,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
 
         result = await db.execute(query)
         rows = result.all()
-        
+
         # Convert to list of tuples, handling NULL averages
         return [
             (r.device_id, float(r.average) if r.average is not None else 0.0)
