@@ -48,7 +48,7 @@ export function UserManagement() {
       if (!response.ok) throw new Error("Failed to fetch users")
       const data = await response.json()
       setUsers(data)
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to fetch users",
@@ -82,7 +82,7 @@ export function UserManagement() {
         is_superuser: false,
       })
       fetchUsers()
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to create user",
@@ -108,7 +108,7 @@ export function UserManagement() {
       })
 
       fetchUsers()
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to deactivate user",

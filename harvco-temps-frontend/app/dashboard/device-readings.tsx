@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range"
@@ -73,7 +73,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
       }
       // Silently ignore abort errors
       if (error instanceof DOMException && error.name === 'AbortError') return;
-      
+
       // Only show toast for non-abort errors
       if (!(error instanceof DOMException) || error.name !== 'AbortError') {
         console.error("Error fetching readings:", error)
@@ -114,7 +114,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
     } catch (error) {
       // Silently ignore abort errors
       if (error instanceof DOMException && error.name === 'AbortError') return;
-      
+
       // Only show toast for non-abort errors
       if (!(error instanceof DOMException) || error.name !== 'AbortError') {
         console.error(`Error fetching ${readingType} statistics:`, error)
@@ -175,7 +175,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
     } catch (error) {
       // Silently ignore abort errors
       if (error instanceof DOMException && error.name === 'AbortError') return;
-      
+
       // Only show toast for non-abort errors
       if (!(error instanceof DOMException) || error.name !== 'AbortError') {
         console.error(`Error fetching latest ${readingType} reading:`, error)
@@ -207,7 +207,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
     if (!date?.from || !date?.to) return;
 
     const controller = new AbortController();
-    
+
     const fetchData = async () => {
       await fetchReadings(controller.signal);
       await Promise.all([
