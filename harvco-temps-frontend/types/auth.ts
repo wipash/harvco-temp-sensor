@@ -17,5 +17,7 @@ export interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>
   logout: () => void
   fetchWithToken: (url: string, options?: RequestInit) => Promise<Response>
+  currentUser: User | null
+  isSuper: boolean
 }
 

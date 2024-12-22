@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react"
 import { AuthContextType, LoginCredentials, Token } from "@/types/auth"
+import { User } from "@/types/user"
 import { getApiUrl } from "@/utils/api"
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -9,6 +10,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const isSuper = currentUser?.is_superuser ?? false
 
   useEffect(() => {
     try {
@@ -22,6 +25,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    if (token) {
+      fetchCurrentUser()
+    } else {
+      setCurrentUser(null)
+    }
+  }, [token])
 
   const refreshToken = async (): Promise<string> => {
     try {
@@ -80,6 +91,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     localStorage.removeItem("token")
     setToken(null)
+    setCurrentUser(null)
+  }
+
+  const fetchCurrentUser = async () => {
+    if (!token) return
+    try {
+      const response = await fetchWithToken(getApiUrl("/api/v1/users/me"))
+      if (response.ok) {
+        const userData = await response.json()
+        setCurrentUser(userData)
+      }
+    } catch (error) {
+      console.error("Error fetching current user:", error)
+    }
   }
 
   const fetchWithToken = async (
@@ -127,6 +152,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         fetchWithToken,
+        currentUser,
+        isSuper,
       }}
     >
       {children}
