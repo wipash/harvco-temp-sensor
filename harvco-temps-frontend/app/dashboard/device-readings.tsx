@@ -32,7 +32,6 @@ const getEndOfDay = (date: Date) => {
 
 export function DeviceReadings({ device }: DeviceReadingsProps) {
   const { token, fetchWithToken } = useAuth()
-  const mounted = useRef(true)
   const [date, setDate] = useState<DateRange | undefined>({
     from: addDays(new Date(), -1),
     to: new Date(),
@@ -42,15 +41,9 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
   const [latestReadings, setLatestReadings] = useState<{ [key in ReadingType]?: LatestReading }>({})
   const { toast } = useToast()
 
-  useEffect(() => {
-    return () => {
-      mounted.current = false
-    }
-  }, [])
-
-  const fetchReadings = useCallback(async () => {
-    if (!token || !mounted.current) {
-      console.log('Skipping fetchReadings - no token or not mounted', { token, mounted: mounted.current });
+  const fetchReadings = useCallback(async (signal?: AbortSignal) => {
+    if (!token) {
+      console.log('Skipping fetchReadings - no token');
       return;
     }
 
@@ -62,9 +55,9 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
       })
 
       console.log('Fetching readings with params:', params.toString());
-      const res = await fetchWithToken(getApiUrl(`/api/v1/readings?${params}`))
-      
-      if (!mounted.current) return
+      const res = await fetchWithToken(getApiUrl(`/api/v1/readings?${params}`), {
+        signal,
+      })
 
       if (!res.ok) {
         const errorData = await res.json()
@@ -75,6 +68,9 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
       console.log('Received readings data:', data);
       setReadings(data)
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return; // Ignore abort errors
+      }
       console.error("Error fetching readings:", error)
       toast({
         title: "Error fetching readings",
@@ -84,8 +80,8 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
     }
   }, [device.id, date, token, toast])
 
-  const fetchStatistics = useCallback(async (readingType: ReadingType) => {
-    if (!token || !mounted.current) return
+  const fetchStatistics = useCallback(async (readingType: ReadingType, signal?: AbortSignal) => {
+    if (!token) return
 
     try {
       const params = new URLSearchParams({
@@ -95,9 +91,9 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
         end_date: date?.to ? getEndOfDay(date.to).toISOString() : "",
       })
 
-      const res = await fetchWithToken(getApiUrl(`/api/v1/readings/statistics?${params}`))
-      
-      if (!mounted.current) return
+      const res = await fetchWithToken(getApiUrl(`/api/v1/readings/statistics?${params}`), {
+        signal,
+      })
 
       if (!res.ok) {
         const errorData = await res.json()
@@ -141,8 +137,8 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
       .sort((a, b) => a.timestamp - b.timestamp);
   }
 
-  const fetchLatestReadings = useCallback(async (readingType: ReadingType) => {
-    if (!token || !mounted.current) return
+  const fetchLatestReadings = useCallback(async (readingType: ReadingType, signal?: AbortSignal) => {
+    if (!token) return
 
     try {
       const params = new URLSearchParams({
@@ -150,9 +146,9 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
         reading_type: readingType,
       })
 
-      const res = await fetchWithToken(getApiUrl(`/api/v1/readings/latest?${params}`))
-      
-      if (!mounted.current) return
+      const res = await fetchWithToken(getApiUrl(`/api/v1/readings/latest?${params}`), {
+        signal,
+      })
 
       if (!res.ok) {
         const errorData = await res.json()
@@ -190,12 +186,26 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
   }, [date, fetchReadings, fetchStatistics, fetchLatestReadings])
 
   useEffect(() => {
-    console.log('Date range changed:', date);
-    if (date?.from && date?.to) {
-      console.log('Refreshing data...');
-      refreshData()
-    }
-  }, [date, refreshData])
+    if (!date?.from || !date?.to) return;
+
+    const controller = new AbortController();
+    
+    const fetchData = async () => {
+      await fetchReadings(controller.signal);
+      await Promise.all([
+        fetchStatistics("temperature", controller.signal),
+        fetchStatistics("humidity", controller.signal),
+        fetchLatestReadings("temperature", controller.signal),
+        fetchLatestReadings("humidity", controller.signal),
+      ]);
+    };
+
+    fetchData();
+
+    return () => {
+      controller.abort();
+    };
+  }, [date, fetchReadings, fetchStatistics, fetchLatestReadings]);
 
   useEffect(() => {
     console.log('Component mounted, token status:', !!token);
