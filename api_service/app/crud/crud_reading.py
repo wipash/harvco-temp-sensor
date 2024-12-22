@@ -68,7 +68,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         reading_type: ReadingType,
-        threshold: int = 1000  # Maximum number of readings before averaging
+        threshold: int = 500  # Maximum number of readings before averaging
     ) -> List[Reading]:
         """
         Get readings for a specific device with filters.
