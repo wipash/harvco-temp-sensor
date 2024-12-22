@@ -108,13 +108,13 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
                 else:
                     if current_window_readings:
                         avg_temp = sum(r.value for r in current_window_readings) / len(current_window_readings)
-                        averaged_readings.append(Reading(
-                            id=None,
+                        averaged_reading = Reading(
                             device_id=device_id,
                             timestamp=current_window_end,
                             value=avg_temp,
-                            reading_type=reading_type
-                        ))
+                            reading_type=current_window_readings[0].reading_type  # Use the actual reading type from the data
+                        )
+                        averaged_readings.append(averaged_reading)
                     current_window_start = current_window_end
                     current_window_end = current_window_start + timedelta(seconds=sampling_window_size)
                     current_window_readings = [reading]
@@ -123,11 +123,10 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             if current_window_readings:
                 avg_temp = sum(r.value for r in current_window_readings) / len(current_window_readings)
                 averaged_readings.append(Reading(
-                    id=None,
                     device_id=device_id,
                     timestamp=current_window_end,
                     value=avg_temp,
-                    reading_type=reading_type
+                    reading_type=current_window_readings[0].reading_type  # Use the actual reading type from the data
                 ))
 
             return averaged_readings
