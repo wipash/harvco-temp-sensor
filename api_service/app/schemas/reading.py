@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from datetime import datetime
 from typing import Optional
+import math
 from app.models.reading import ReadingType
 
 class ReadingBase(BaseModel):
@@ -21,6 +22,14 @@ class ReadingUpdate(BaseModel):
 class ReadingOut(ReadingBase):
     """Schema for reading output data."""
     timestamp: datetime
+    id: int
+    device_id: int
+
+    @validator('value')
+    def validate_value(cls, v):
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            return 0.0  # or None, depending on your preference
+        return v
 
     class Config:
         from_attributes = True
