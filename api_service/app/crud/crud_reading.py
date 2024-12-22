@@ -92,10 +92,17 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         query = select(Reading).where(
             and_(
                 Reading.device_id == device_id,
-                Reading.reading_type == reading_type,  # Move this up to initial filter
+                Reading.reading_type == reading_type.value,  # Convert enum to string value
                 self._valid_value_filters()
             )
-        ).order_by(Reading.timestamp.asc())  # Change to ascending order
+        )
+
+        if start_date:
+            query = query.where(Reading.timestamp >= start_date)
+        if end_date:
+            query = query.where(Reading.timestamp <= end_date)
+
+        query = query.order_by(Reading.timestamp.asc())
 
         result = await db.execute(query)
         readings = list(result.scalars().all())
