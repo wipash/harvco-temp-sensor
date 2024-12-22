@@ -47,40 +47,36 @@ async def test_engine():
         echo=False,
         future=True
     )
-
-    # Import all models to ensure they are registered with Base
-    from app.models import User, Device, Reading
-
+    
+    # Create tables once at the start of test session
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)  # Clean slate
-        await conn.run_sync(Base.metadata.create_all)  # Create all tables
-
+        await conn.run_sync(Base.metadata.create_all)
+    
     yield engine
-
-    # Cleanup after all tests
+    
+    # Clean up at the end of test session
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-
     await engine.dispose()
 
 @pytest_asyncio.fixture
 async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
     """Create a test database session."""
-    # Create session
     async_session = sessionmaker(
         test_engine,
         class_=AsyncSession,
         expire_on_commit=False
     )
-
+    
     async with async_session() as session:
         try:
             yield session
         finally:
             await session.rollback()
-            # Drop all tables after the test
-            async with test_engine.begin() as conn:
-                await conn.run_sync(Base.metadata.drop_all)
+            # Clear data but don't drop tables
+            for table in reversed(Base.metadata.sorted_tables):
+                await session.execute(table.delete())
+            await session.commit()
 
 # Test data fixtures
 @pytest.fixture
