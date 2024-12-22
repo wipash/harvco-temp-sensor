@@ -108,14 +108,34 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
     return readings
       .filter((reading) => reading.reading_type === type)
       .map((reading) => {
-        // Ensure we have a valid Date object first
-        const date = new Date(reading.timestamp + 'Z')
-        return {
-          // Store the ISO string which Recharts can handle
-          timestamp: date.toISOString(),
-          value: reading.value,
+        try {
+          // Log the incoming timestamp for debugging
+          console.log('Raw timestamp:', reading.timestamp)
+          
+          // Parse the timestamp, ensuring UTC
+          const timestamp = reading.timestamp.endsWith('Z') 
+            ? reading.timestamp 
+            : reading.timestamp + 'Z'
+          
+          // Create the date object
+          const date = new Date(timestamp)
+          
+          // Validate the date
+          if (isNaN(date.getTime())) {
+            console.error('Invalid date created from timestamp:', timestamp)
+            return null
+          }
+
+          return {
+            timestamp: date.toISOString(),
+            value: reading.value,
+          }
+        } catch (e) {
+          console.error('Error processing reading:', reading, e)
+          return null
         }
       })
+      .filter((reading): reading is NonNullable<typeof reading> => reading !== null)
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
   }
 
