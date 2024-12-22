@@ -119,9 +119,10 @@ class TestUserCRUD:
             device_in = DeviceCreate(
                 device_id=f"device-{user.id}",
                 name=f"Test Device for {user.email}",
-                is_active=True
+                is_active=True,
+                owner_id=user.id
             )
-            await crud_device.create(db_session, obj_in=device_in, owner_id=user.id)
+            await crud_device.create(db_session, obj_in=device_in)
         
         # Test get_multi_with_devices
         users_with_devices = await crud_user.get_multi_with_devices(
@@ -150,12 +151,17 @@ class TestUserCRUD:
         
         # Create multiple devices for user
         devices_data = [
-            DeviceCreate(device_id=f"device-{i}", name=f"Device {i}", is_active=True)
+            DeviceCreate(
+                device_id=f"device-{i}",
+                name=f"Device {i}",
+                is_active=True,
+                owner_id=user.id
+            )
             for i in range(3)
         ]
         
         for device_in in devices_data:
-            await crud_device.create(db_session, obj_in=device_in, owner_id=user.id)
+            await crud_device.create(db_session, obj_in=device_in)
         
         # Test getting all devices
         devices = await crud_user.get_devices(
@@ -201,9 +207,10 @@ class TestUserCRUD:
         device_in = DeviceCreate(
             device_id="test-device",
             name="Test Device",
-            is_active=True
+            is_active=True,
+            owner_id=user.id
         )
-        device = await crud_device.create(db_session, obj_in=device_in, owner_id=user.id)
+        device = await crud_device.create(db_session, obj_in=device_in)
         
         # Deactivate user
         deactivated_user = await crud_user.deactivate(db_session, user_id=user.id)
