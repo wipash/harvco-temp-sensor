@@ -7,7 +7,7 @@ from ..db.base import Base
 
 class UTCDateTime(TypeDecorator):
     """Automatically convert naive datetimes to UTC-aware ones"""
-    impl = DateTime
+    impl = DateTime(timezone=True)  # Changed to use timezone=True
     cache_ok = True
 
     def process_bind_param(self, value, dialect):
