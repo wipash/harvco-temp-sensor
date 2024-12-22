@@ -42,7 +42,7 @@ export default function DashboardPage() {
       if (!res.ok) throw new Error("Failed to fetch devices")
       const data = await res.json()
       setDevices(data)
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to fetch devices",
