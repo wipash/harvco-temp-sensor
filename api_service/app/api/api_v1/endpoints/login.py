@@ -7,7 +7,7 @@ This module provides endpoints for user authentication and token management.
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status, Cookie
+from fastapi import APIRouter, Depends, HTTPException, status, Cookie, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -91,12 +91,31 @@ async def login(
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    refresh_token: Annotated[str | None, Cookie(alias="refresh_token")] = None
 ) -> dict:
     """
     Get new access token using refresh token.
     """
+    # Try to get refresh token from cookies multiple ways
+    refresh_token = None
+    
+    # 1. Try from request.cookies
+    if "refresh_token" in request.cookies:
+        refresh_token = request.cookies["refresh_token"]
+    
+    # 2. Try from Cookie header directly
+    if not refresh_token and "Cookie" in request.headers:
+        cookie_header = request.headers["Cookie"]
+        cookies = dict(cookie.split("=", 1) for cookie in cookie_header.split("; "))
+        if "refresh_token" in cookies:
+            refresh_token = cookies["refresh_token"]
+
+    # Debug logging
+    print("All cookies:", request.cookies)
+    print("All headers:", request.headers)
+    print("Found refresh token:", refresh_token)
+
     if not refresh_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
