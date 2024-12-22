@@ -7,7 +7,7 @@ the repository pattern.
 
 from typing import Optional, List, Any, Dict
 from datetime import datetime, timedelta
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, not_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
@@ -21,6 +21,14 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
     CRUD operations for Reading model.
     Inherits basic CRUD operations from CRUDBase.
     """
+
+    def _valid_value_filters(self):
+        """Return SQLAlchemy filters for valid numeric values."""
+        return and_(
+            Reading.value.isnot(None),
+            not_(func.isnan(Reading.value)),
+            not_(func.isinf(Reading.value))
+        )
 
     async def create_with_device(
         self,
@@ -79,7 +87,12 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         if start_date and end_date and (end_date - start_date > max_time_window):
             raise HTTPException(status_code=400, detail="Time window too large")
 
-        query = select(Reading).where(Reading.device_id == device_id)
+        query = select(Reading).where(
+            and_(
+                Reading.device_id == device_id,
+                self._valid_value_filters()
+            )
+        )
 
         if start_date:
             query = query.where(Reading.timestamp >= start_date)
@@ -153,7 +166,12 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         """
         query = (
             select(Reading)
-            .where(Reading.device_id == device_id)
+            .where(
+                and_(
+                    Reading.device_id == device_id,
+                    self._valid_value_filters()
+                )
+            )
         )
 
         if reading_type:
@@ -264,7 +282,12 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         Returns:
             List[Reading]: List of readings
         """
-        query = select(Reading).where(Reading.reading_type == reading_type)
+        query = select(Reading).where(
+            and_(
+                Reading.reading_type == reading_type,
+                self._valid_value_filters()
+            )
+        )
 
         if start_date:
             query = query.where(Reading.timestamp >= start_date)
@@ -304,8 +327,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             .where(
                 and_(
                     Reading.reading_type == reading_type,
-                    Reading.value.isnot(None),  # Exclude NULL values
-                    Reading.value != float('nan')  # Exclude NaN values
+                    self._valid_value_filters()
                 )
             )
             .group_by(Reading.device_id)
