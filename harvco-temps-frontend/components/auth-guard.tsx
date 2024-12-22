@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -11,20 +11,18 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, requireSuper = false }: AuthGuardProps) {
-  const { token, isSuper } = useAuth()
+  const { token, isSuper, isLoading } = useAuth()
   const router = useRouter()
-  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    if (!token) {
+    if (!isLoading && !token) {
       router.push("/login")
-    } else if (requireSuper && !isSuper) {
+    } else if (!isLoading && requireSuper && !isSuper) {
       router.push("/dashboard")
     }
-    setIsChecking(false)
-  }, [token, isSuper, requireSuper, router])
+  }, [token, isSuper, requireSuper, router, isLoading])
 
-  if (isChecking) {
+  if (isLoading) {
     return <LoadingSpinner />
   }
 

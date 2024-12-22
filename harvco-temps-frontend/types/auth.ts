@@ -19,5 +19,6 @@ export interface AuthContextType {
   fetchWithToken: (url: string, options?: RequestInit) => Promise<Response>
   currentUser: User | null
   isSuper: boolean
+  isLoading: boolean
 }
 

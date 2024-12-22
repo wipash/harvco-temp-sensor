@@ -154,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fetchWithToken,
         currentUser,
         isSuper,
+        isLoading,
       }}
     >
       {children}
