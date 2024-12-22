@@ -91,34 +91,37 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         query = select(Reading).where(
             and_(
                 Reading.device_id == device_id,
+                Reading.reading_type == reading_type,  # Move this up to initial filter
                 self._valid_value_filters()
             )
-        )
+        ).order_by(Reading.timestamp.asc())  # Change to ascending order
 
-        if start_date:
-            query = query.where(Reading.timestamp >= start_date)
-        if end_date:
-            query = query.where(Reading.timestamp <= end_date)
-        if reading_type:
-            query = query.where(Reading.reading_type == reading_type)
-
-        import logging
-        logger = logging.getLogger(__name__)
-
-        query = query.order_by(Reading.timestamp.desc())
         result = await db.execute(query)
         readings = list(result.scalars().all())
 
-        logger.debug(f"Total readings before averaging: {len(readings)}")
-        logger.debug(f"Time window: {start_date} to {end_date}")
-        logger.debug(f"Reading type: {reading_type}")
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)  # Ensure debug logging is enabled
+        
+        logger.info(f"Query executed for device_id={device_id}, reading_type={reading_type}")
+        logger.info(f"Time range: {start_date} to {end_date}")
+        logger.info(f"Found {len(readings)} readings")
+
+        # If no readings found, return empty list
+        if not readings:
+            logger.info("No readings found, returning empty list")
+            return []
+
+        # If under threshold, return all readings
+        if len(readings) <= threshold:
+            logger.info(f"Under threshold ({threshold}), returning all readings")
+            return readings
 
         # If the number of readings exceeds the threshold, perform averaging
         if len(readings) > threshold:
             time_window = (end_date - start_date).total_seconds()
             sampling_window_size = time_window / threshold
 
-            averaged_readings: list[Reading] = []
+            averaged_readings = []
             current_window_start = start_date
             
             while current_window_start < end_date:
@@ -127,29 +130,28 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
                     end_date
                 )
                 
-                # Get readings that fall within this window
                 window_readings = [
                     r for r in readings 
-                    if (current_window_start <= r.timestamp < current_window_end and 
-                        r.reading_type == reading_type)
+                    if current_window_start <= r.timestamp < current_window_end
                 ]
                 
-                # Only create an averaged reading if we have data in this window
                 if window_readings:
                     avg_value = sum(r.value for r in window_readings) / len(window_readings)
-                    # Use the middle timestamp of the actual readings in this window
                     mid_timestamp = window_readings[len(window_readings)//2].timestamp
+                    
+                    logger.info(f"Window {current_window_start} to {current_window_end}: "
+                              f"{len(window_readings)} readings, avg={avg_value}")
                     
                     averaged_readings.append(Reading(
                         device_id=device_id,
                         timestamp=mid_timestamp,
                         value=avg_value,
-                        reading_type=window_readings[0].reading_type
+                        reading_type=reading_type  # Use the input reading_type
                     ))
                 
                 current_window_start = current_window_end
 
-            logger.debug(f"Total averaged readings: {len(averaged_readings)}")
+            logger.info(f"Created {len(averaged_readings)} averaged readings")
             return averaged_readings
 
         return readings
