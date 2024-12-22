@@ -138,7 +138,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
                 avg_temp = sum(r.value for r in current_window_readings) / len(current_window_readings)
                 averaged_readings.append(Reading(
                     device_id=device_id,
-                    timestamp=current_window_end,
+                    timestamp=current_window_readings[-1].timestamp,  # Use the last actual reading's timestamp
                     value=avg_temp,
                     reading_type=current_window_readings[0].reading_type  # Use the actual reading type from the data
                 ))
