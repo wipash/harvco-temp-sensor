@@ -71,12 +71,18 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         return; // Ignore abort errors
       }
-      console.error("Error fetching readings:", error)
-      toast({
-        title: "Error fetching readings",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      })
+      // Silently ignore abort errors
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      
+      // Only show toast for non-abort errors
+      if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+        console.error("Error fetching readings:", error)
+        toast({
+          title: "Error fetching readings",
+          description: error instanceof Error ? error.message : "Unknown error occurred",
+          variant: "destructive",
+        })
+      }
     }
   }, [device.id, date, token, toast])
 
@@ -106,12 +112,18 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
         [readingType]: data
       }))
     } catch (error) {
-      console.error(`Error fetching ${readingType} statistics:`, error)
-      toast({
-        title: `Error fetching ${readingType} statistics`,
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      })
+      // Silently ignore abort errors
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      
+      // Only show toast for non-abort errors
+      if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+        console.error(`Error fetching ${readingType} statistics:`, error)
+        toast({
+          title: `Error fetching ${readingType} statistics`,
+          description: error instanceof Error ? error.message : "Unknown error occurred",
+          variant: "destructive",
+        })
+      }
     }
   }, [device.id, date, token, toast])
 
@@ -161,12 +173,18 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
         [readingType]: data
       }))
     } catch (error) {
-      console.error(`Error fetching latest ${readingType} reading:`, error)
-      toast({
-        title: `Error fetching latest ${readingType} reading`,
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      })
+      // Silently ignore abort errors
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      
+      // Only show toast for non-abort errors
+      if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+        console.error(`Error fetching latest ${readingType} reading:`, error)
+        toast({
+          title: `Error fetching latest ${readingType} reading`,
+          description: error instanceof Error ? error.message : "Unknown error occurred",
+          variant: "destructive",
+        })
+      }
     }
   }, [device.id, token, toast])
 
