@@ -273,7 +273,9 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                         tickFormatter={(value) => {
                           if (!value) return ''
                           try {
-                            return format(new Date(value), "HH:mm")
+                            // Convert UTC to local time
+                            const date = new Date(value)
+                            return format(date, "HH:mm")
                           } catch (e) {
                             console.error('Error formatting tick:', value, e)
                             return ''
@@ -289,7 +291,9 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                         labelFormatter={(label) => {
                           if (!label) return ''
                           try {
-                            return format(new Date(label), "MMM d, yyyy HH:mm:ss")
+                            // Convert UTC to local time
+                            const date = new Date(label)
+                            return format(date, "MMM d, yyyy HH:mm:ss")
                           } catch (e) {
                             console.error('Error formatting label:', label, e)
                             return ''
