@@ -87,7 +87,7 @@ class TestJWTTokens:
         )
 
         decoded = decode_token(token)
-        created_at = datetime.fromtimestamp(decoded["exp"]) - expires_in
+        created_at = datetime.utcfromtimestamp(decoded["exp"]) - expires_in
 
         # Check if expiration time is approximately correct
         # (allowing 5 seconds tolerance for test execution time)
