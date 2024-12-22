@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 from datetime import datetime, timedelta
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
