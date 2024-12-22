@@ -109,25 +109,9 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
       .filter((reading) => reading.reading_type === type)
       .map((reading) => {
         try {
-          console.log('Raw timestamp:', reading.timestamp);
-          const timestamp = reading.timestamp.endsWith('Z') 
-            ? reading.timestamp 
-            : reading.timestamp + 'Z';
-          console.log('Normalized timestamp:', timestamp);
-          
-          const date = new Date(timestamp);
-          console.log('Date object:', date);
-          console.log('Date ISO string:', date.toISOString());
-          console.log('Local string:', date.toString());
-          console.log('Timezone offset (minutes):', date.getTimezoneOffset());
-
-          if (isNaN(date.getTime())) {
-            console.error('Invalid date created from timestamp:', timestamp);
-            return null;
-          }
-
+          const date = new Date(reading.timestamp);
           return {
-            timestamp: date.toISOString(),
+            timestamp: date.getTime(),
             value: reading.value,
           }
         } catch (e) {
@@ -136,7 +120,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
         }
       })
       .filter((reading): reading is NonNullable<typeof reading> => reading !== null)
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .sort((a, b) => a.timestamp - b.timestamp)
   }
 
   const fetchLatestReadings = useCallback(async (readingType: ReadingType) => {
@@ -210,7 +194,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
               Time
             </span>
             <span className="font-bold tabular-nums">
-              {format(new Date(label), "MMM d, yyyy HH:mm:ss")}
+              {format(label, "MMM d, yyyy HH:mm:ss")}
             </span>
           </div>
         </div>
@@ -288,8 +272,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                         tickFormatter={(value) => {
                           if (!value) return ''
                           try {
-                            const date = new Date(value) // This will automatically convert UTC to local
-                            return format(date, "HH:mm")
+                            return format(value, "HH:mm")
                           } catch (e) {
                             console.error('Error formatting tick:', value, e)
                             return ''
