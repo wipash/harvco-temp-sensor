@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, func, String, Enum
 from sqlalchemy.orm import relationship
-from .base import Base
+from ..db.base import Base
 import enum
 
 class ReadingType(str, enum.Enum):
@@ -15,6 +15,6 @@ class Reading(Base):
     reading_type = Column(Enum(ReadingType), nullable=False)
     value = Column(Float, nullable=False)
     timestamp = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    
+
     # Relationships
     device = relationship("Device", back_populates="readings")

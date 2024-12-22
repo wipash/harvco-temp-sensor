@@ -47,36 +47,32 @@ async def test_engine():
         echo=False,
         future=True
     )
-    
+
     # Import all models to ensure they are registered with Base
     from app.models import User, Device, Reading
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)  # Clean slate
         await conn.run_sync(Base.metadata.create_all)  # Create all tables
-    
+
     yield engine
-    
+
     # Cleanup after all tests
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    
+
     await engine.dispose()
 
 @pytest_asyncio.fixture
 async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
     """Create a test database session."""
-    # Create tables
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
     # Create session
     async_session = sessionmaker(
         test_engine,
         class_=AsyncSession,
         expire_on_commit=False
     )
-    
+
     async with async_session() as session:
         try:
             yield session
@@ -120,13 +116,13 @@ async def test_user(db_session: AsyncSession) -> User:
     """Create a test user."""
     from app.crud.crud_user import user as crud_user
     from app.schemas.user import UserCreate
-    
+
     user_in = UserCreate(
         email="test@example.com",
         password="testpassword123",
         is_active=True,
         is_superuser=False
     )
-    
+
     db_user = await crud_user.create(db_session, obj_in=user_in)
     return db_user
