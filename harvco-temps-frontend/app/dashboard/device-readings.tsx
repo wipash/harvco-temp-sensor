@@ -240,9 +240,24 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-sm text-gray-500">Current</div>
-                      <div className="text-2xl font-bold">
-                        {getCurrentReading(type)?.toFixed(1) || "--"}
-                        {type === "temperature" ? "°C" : "%"}
+                      <div>
+                        <div className="text-2xl font-bold">
+                          {getCurrentReading(type)?.toFixed(1) || "--"}
+                          {type === "temperature" ? "°C" : "%"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Last received: {latestReadings[type]?.timestamp 
+                            ? (() => {
+                                try {
+                                  const date = new Date(latestReadings[type]?.timestamp || '')
+                                  return format(date, "MMM d, HH:mm:ss")
+                                } catch (e) {
+                                  console.error('Error formatting last received timestamp:', latestReadings[type]?.timestamp, e)
+                                  return "--"
+                                }
+                              })()
+                            : "--"}
+                        </div>
                       </div>
                     </div>
                     <div>
@@ -273,8 +288,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                         tickFormatter={(value) => {
                           if (!value) return ''
                           try {
-                            // Convert UTC to local time
-                            const date = new Date(value)
+                            const date = new Date(value) // This will automatically convert UTC to local
                             return format(date, "HH:mm")
                           } catch (e) {
                             console.error('Error formatting tick:', value, e)
@@ -291,8 +305,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                         labelFormatter={(label) => {
                           if (!label) return ''
                           try {
-                            // Convert UTC to local time
-                            const date = new Date(label)
+                            const date = new Date(label) // This will automatically convert UTC to local
                             return format(date, "MMM d, yyyy HH:mm:ss")
                           } catch (e) {
                             console.error('Error formatting label:', label, e)
