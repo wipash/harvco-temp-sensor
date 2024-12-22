@@ -107,11 +107,16 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   const formatReadings = (type: ReadingType) => {
     return readings
       .filter((reading) => reading.reading_type === type)
-      .map((reading) => ({
-        timestamp: new Date(reading.timestamp + 'Z').getTime(), // Store as Unix timestamp
-        value: reading.value,
-      }))
-      .sort((a, b) => a.timestamp - b.timestamp)
+      .map((reading) => {
+        // Ensure we have a valid Date object first
+        const date = new Date(reading.timestamp + 'Z')
+        return {
+          // Store the ISO string which Recharts can handle
+          timestamp: date.toISOString(),
+          value: reading.value,
+        }
+      })
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
   }
 
   const fetchLatestReadings = useCallback(async (readingType: ReadingType) => {
@@ -246,7 +251,13 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                         dataKey="timestamp"
                         tick={{ fontSize: 12 }}
                         tickFormatter={(value) => {
-                          return format(new Date(value), "HH:mm")
+                          if (!value) return ''
+                          try {
+                            return format(new Date(value), "HH:mm")
+                          } catch (e) {
+                            console.error('Error formatting tick:', value, e)
+                            return ''
+                          }
                         }}
                       />
                       <YAxis
@@ -256,7 +267,13 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                       <Tooltip
                         content={<CustomTooltip />}
                         labelFormatter={(label) => {
-                          return format(new Date(label), "MMM d, yyyy HH:mm:ss")
+                          if (!label) return ''
+                          try {
+                            return format(new Date(label), "MMM d, yyyy HH:mm:ss")
+                          } catch (e) {
+                            console.error('Error formatting label:', label, e)
+                            return ''
+                          }
                         }}
                       />
                       <Line
