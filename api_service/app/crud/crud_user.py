@@ -73,8 +73,8 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         db_obj = User(
             email=obj_in.email,
             hashed_password=create_password_hash(obj_in.password),
-            is_active=True,
-            is_superuser=False
+            is_active=obj_in.is_active,
+            is_superuser=obj_in.is_superuser if hasattr(obj_in, 'is_superuser') else False
         )
         db.add(db_obj)
         await db.commit()
