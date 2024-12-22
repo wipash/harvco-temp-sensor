@@ -5,7 +5,7 @@ import logging
 import asyncio
 import re
 from schemas import ReadingCreate
-from datetime import datetime
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class MQTTClientService:
                             "device_id": device_id,
                             "reading_type": reading_type,
                             "value": value,
-                            "timestamp": datetime.utcnow()
+                            "timestamp": datetime.now(UTC)
                         }
 
                         try:

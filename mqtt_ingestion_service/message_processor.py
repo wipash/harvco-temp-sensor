@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from models import Device, Reading
 from sqlalchemy.future import select
-from datetime import datetime
+from datetime import UTC, datetime
 
 class MessageProcessor:
     def __init__(self, session: AsyncSession) -> None:
@@ -27,7 +27,7 @@ class MessageProcessor:
 
             if reading_data.value is not None:
                 if reading_data.timestamp is None:
-                    reading_data.timestamp = datetime.utcnow()
+                    reading_data.timestamp = datetime.now(UTC)
 
                 logging.info(f"Recording new {reading_data.reading_type} reading for device ID: {device.id}")
                 reading = Reading(
