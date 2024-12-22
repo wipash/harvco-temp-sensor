@@ -13,3 +13,4 @@ class User(Base):
 
     # Relationships
     devices = relationship("Device", back_populates="owner")
+    refresh_tokens = relationship("RefreshToken", back_populates="user")
