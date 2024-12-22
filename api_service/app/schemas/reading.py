@@ -22,8 +22,6 @@ class ReadingUpdate(BaseModel):
 class ReadingOut(ReadingBase):
     """Schema for reading output data."""
     timestamp: datetime
-    id: Optional[int] = None  # Make id optional
-    device_id: int
 
     @validator('value')
     def validate_value(cls, v):

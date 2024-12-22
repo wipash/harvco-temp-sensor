@@ -4,8 +4,7 @@ Device endpoints for device management.
 This module provides endpoints for device registration and management.
 """
 
-from typing import List, Annotated, Optional
-from datetime import datetime
+from typing import List, Annotated
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,13 +13,10 @@ from app.api.deps import (
     get_current_active_user,
     get_current_superuser,
     get_pagination,
-    get_date_range,
     PaginationParams,
-    DateRangeParams
 )
 from app.crud import device as crud_device
 from app.models.user import User
-from app.models.reading import ReadingType
 from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceOut
 
 router = APIRouter()
@@ -34,15 +30,15 @@ async def create_device(
 ) -> DeviceOut:
     """
     Create new device.
-    
+
     Args:
         db: Database session
         device_in: Device creation data
         current_user: Current authenticated user
-        
+
     Returns:
         DeviceOut: Created device
-        
+
     Raises:
         HTTPException: If device with this device_id already exists
     """
@@ -68,13 +64,13 @@ async def read_devices(
 ) -> List[DeviceOut]:
     """
     Retrieve current user's devices.
-    
+
     Args:
         db: Database session
         current_user: Current authenticated user
         pagination: Pagination parameters
         include_inactive: Whether to include inactive devices
-        
+
     Returns:
         List[DeviceOut]: List of devices
     """
@@ -96,15 +92,15 @@ async def read_device(
 ) -> DeviceOut:
     """
     Get device by ID.
-    
+
     Args:
         device_id: Device ID
         db: Database session
         current_user: Current authenticated user
-        
+
     Returns:
         DeviceOut: Device information
-        
+
     Raises:
         HTTPException: If device not found or user doesn't own it
     """
@@ -131,16 +127,16 @@ async def update_device(
 ) -> DeviceOut:
     """
     Update device.
-    
+
     Args:
         device_id: Device ID to update
         device_in: Update data
         db: Database session
         current_user: Current authenticated user
-        
+
     Returns:
         DeviceOut: Updated device
-        
+
     Raises:
         HTTPException: If device not found or user doesn't own it
     """
@@ -166,15 +162,15 @@ async def delete_device(
 ) -> DeviceOut:
     """
     Deactivate device.
-    
+
     Args:
         device_id: Device ID to deactivate
         db: Database session
         current_user: Current authenticated user
-        
+
     Returns:
         DeviceOut: Deactivated device
-        
+
     Raises:
         HTTPException: If device not found or user doesn't own it
     """
@@ -201,13 +197,13 @@ async def bulk_update_device_status(
 ) -> List[DeviceOut]:
     """
     Bulk update device status. Superuser only.
-    
+
     Args:
         device_ids: List of device IDs to update
         is_active: New active status
         db: Database session
         current_user: Current authenticated superuser
-        
+
     Returns:
         List[DeviceOut]: List of updated devices
     """
