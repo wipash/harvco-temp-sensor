@@ -25,8 +25,10 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         """Return SQLAlchemy filters for valid numeric values."""
         return and_(
             Reading.value.isnot(None),
-            not_(func.isnan(Reading.value)),
-            not_(func.isinf(Reading.value))
+            Reading.value != float('inf'),  # Check for positive infinity
+            Reading.value != float('-inf'),  # Check for negative infinity
+            Reading.value == Reading.value  # PostgreSQL's way of checking for NaN
+                                          # NaN is the only value where x != x
         )
 
     async def create_with_device(
