@@ -21,7 +21,12 @@ def create_password_hash(password: str) -> str:
 
     Returns:
         Hashed password string
+        
+    Raises:
+        ValueError: If password is empty
     """
+    if not password:
+        raise ValueError("Password cannot be empty")
     return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

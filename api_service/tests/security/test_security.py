@@ -39,7 +39,7 @@ class TestPasswordHashing:
 
     def test_empty_password_handling(self):
         """Test handling of empty passwords"""
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="Password cannot be empty"):
             create_password_hash("")
 
 class TestJWTTokens:
