@@ -1,6 +1,6 @@
 import pytest
 import pytest_asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,13 +8,15 @@ from app.crud.crud_token import crud_refresh_token
 from app.schemas.token import RefreshTokenCreate
 from app.models.token import RefreshToken
 
+pytestmark = pytest.mark.asyncio
+
 @pytest.fixture
 def refresh_token_create_data():
     """Sample refresh token creation data."""
     return {
         "token_id": str(uuid.uuid4()),
         "user_id": 1,
-        "expires_at": datetime.utcnow() + timedelta(days=30)
+        "expires_at": datetime.now(UTC) + timedelta(days=30)
     }
 
 @pytest_asyncio.fixture
@@ -76,7 +78,7 @@ class TestCRUDRefreshToken:
         expired_data = refresh_token_create_data.copy()
         expired_data["user_id"] = test_user.id
         expired_data["token_id"] = str(uuid.uuid4())
-        expired_data["expires_at"] = datetime.utcnow() - timedelta(days=1)
+        expired_data["expires_at"] = datetime.now(UTC) - timedelta(days=1)
         expired_token = RefreshTokenCreate(**expired_data)
         await crud_refresh_token.create(db_session, obj_in=expired_token)
 
@@ -130,14 +132,14 @@ class TestCRUDRefreshToken:
             data = refresh_token_create_data.copy()
             data["user_id"] = test_user.id
             data["token_id"] = str(uuid.uuid4())
-            data["expires_at"] = datetime.utcnow() - timedelta(days=1)
+            data["expires_at"] = datetime.now(UTC) - timedelta(days=1)
             tokens_data.append(data)
         
         # 1 active token
         active_data = refresh_token_create_data.copy()
         active_data["user_id"] = test_user.id
         active_data["token_id"] = str(uuid.uuid4())
-        active_data["expires_at"] = datetime.utcnow() + timedelta(days=30)
+        active_data["expires_at"] = datetime.now(UTC) + timedelta(days=30)
         tokens_data.append(active_data)
 
         # Create all tokens
