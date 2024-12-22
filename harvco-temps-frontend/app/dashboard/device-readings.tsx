@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range"
 import { Device, Reading, ReadingStatistics } from "@/types/device"
@@ -41,6 +42,8 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   const { toast } = useToast()
 
   const fetchReadings = useCallback(async () => {
+    if (!token || !mounted.current) return
+
     try {
       const params = new URLSearchParams({
         device_id: device.id.toString(),
@@ -48,11 +51,9 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
         end_date: date?.to ? getEndOfDay(date.to).toISOString() : "",
       })
 
-      const res = await fetch(getApiUrl(`/api/v1/readings?${params}`), {
-        headers: {
-          Authorization: token,
-        },
-      })
+      const res = await fetchWithToken(getApiUrl(`/api/v1/readings?${params}`))
+      
+      if (!mounted.current) return
 
       if (!res.ok) {
         const errorData = await res.json()
@@ -72,6 +73,8 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   }, [device.id, date, token, toast])
 
   const fetchStatistics = useCallback(async (readingType: ReadingType) => {
+    if (!token || !mounted.current) return
+
     try {
       const params = new URLSearchParams({
         device_id: device.id.toString(),
@@ -80,11 +83,9 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
         end_date: date?.to ? getEndOfDay(date.to).toISOString() : "",
       })
 
-      const res = await fetch(getApiUrl(`/api/v1/readings/statistics?${params}`), {
-        headers: {
-          Authorization: token,
-        },
-      })
+      const res = await fetchWithToken(getApiUrl(`/api/v1/readings/statistics?${params}`))
+      
+      if (!mounted.current) return
 
       if (!res.ok) {
         const errorData = await res.json()
@@ -129,17 +130,17 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   }
 
   const fetchLatestReadings = useCallback(async (readingType: ReadingType) => {
+    if (!token || !mounted.current) return
+
     try {
       const params = new URLSearchParams({
         device_id: device.id.toString(),
         reading_type: readingType,
       })
 
-      const res = await fetch(getApiUrl(`/api/v1/readings/latest?${params}`), {
-        headers: {
-          Authorization: token,
-        },
-      })
+      const res = await fetchWithToken(getApiUrl(`/api/v1/readings/latest?${params}`))
+      
+      if (!mounted.current) return
 
       if (!res.ok) {
         const errorData = await res.json()
@@ -166,6 +167,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   }
 
   const refreshData = useCallback(() => {
+    if (!token) return
     if (date?.from && date?.to) {
       fetchReadings()
       fetchStatistics("temperature")
