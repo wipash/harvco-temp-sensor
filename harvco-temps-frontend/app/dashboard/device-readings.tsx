@@ -17,6 +17,12 @@ interface DeviceReadingsProps {
 
 type ReadingType = "temperature" | "humidity"
 
+const getEndOfDay = (date: Date) => {
+  const endOfDay = new Date(date)
+  endOfDay.setHours(23, 59, 59, 999)
+  return endOfDay
+}
+
 export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   const [date, setDate] = useState<DateRange | undefined>({
     from: addDays(new Date(), -7),
@@ -31,7 +37,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
       const params = new URLSearchParams({
         device_id: device.id.toString(),
         start_date: date?.from?.toISOString() || "",
-        end_date: date?.to?.toISOString() || "",
+        end_date: date?.to ? getEndOfDay(date.to).toISOString() : "",
       })
 
       const res = await fetch(getApiUrl(`/api/v1/readings?${params}`), {
@@ -63,7 +69,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
         device_id: device.id.toString(),
         reading_type: readingType,
         start_date: date?.from?.toISOString() || "",
-        end_date: date?.to?.toISOString() || "",
+        end_date: date?.to ? getEndOfDay(date.to).toISOString() : "",
       })
 
       const res = await fetch(getApiUrl(`/api/v1/readings/statistics?${params}`), {
