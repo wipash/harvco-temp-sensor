@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range"
 import { Device, Reading, ReadingStatistics } from "@/types/device"
+import { Button } from "@/components/ui/button"
+import { RefreshCw } from "lucide-react"
 
 interface LatestReading {
   value: number
@@ -171,7 +173,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
     return latestReadings[type]?.value
   }
 
-  useEffect(() => {
+  const refreshData = useCallback(() => {
     if (date?.from && date?.to) {
       fetchReadings()
       fetchStatistics("temperature")
@@ -180,6 +182,12 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
       fetchLatestReadings("humidity")
     }
   }, [date, fetchReadings, fetchStatistics, fetchLatestReadings])
+
+  useEffect(() => {
+    if (date?.from && date?.to) {
+      refreshData()
+    }
+  }, [date, refreshData])
 
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -220,7 +228,17 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Readings for {device.name || device.device_id}</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>Readings for {device.name || device.device_id}</CardTitle>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={refreshData}
+                title="Refresh data"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
             <DatePickerWithRange date={date} onDateChange={setDate} />
           </div>
         </CardHeader>
