@@ -20,8 +20,6 @@ class ReadingUpdate(BaseModel):
 
 class ReadingOut(ReadingBase):
     """Schema for reading output data."""
-    id: int
-    device_id: int
     timestamp: datetime
 
     class Config:
