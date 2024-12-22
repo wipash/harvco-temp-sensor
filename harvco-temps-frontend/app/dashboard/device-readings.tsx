@@ -49,7 +49,10 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
   }, [])
 
   const fetchReadings = useCallback(async () => {
-    if (!token || !mounted.current) return
+    if (!token || !mounted.current) {
+      console.log('Skipping fetchReadings - no token or not mounted', { token, mounted: mounted.current });
+      return;
+    }
 
     try {
       const params = new URLSearchParams({
@@ -58,6 +61,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
         end_date: date?.to ? getEndOfDay(date.to).toISOString() : "",
       })
 
+      console.log('Fetching readings with params:', params.toString());
       const res = await fetchWithToken(getApiUrl(`/api/v1/readings?${params}`))
       
       if (!mounted.current) return
@@ -68,6 +72,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
       }
 
       const data = await res.json()
+      console.log('Received readings data:', data);
       setReadings(data)
     } catch (error) {
       console.error("Error fetching readings:", error)
@@ -185,10 +190,16 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
   }, [date, fetchReadings, fetchStatistics, fetchLatestReadings])
 
   useEffect(() => {
+    console.log('Date range changed:', date);
     if (date?.from && date?.to) {
+      console.log('Refreshing data...');
       refreshData()
     }
   }, [date, refreshData])
+
+  useEffect(() => {
+    console.log('Component mounted, token status:', !!token);
+  }, [token])
 
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -226,6 +237,11 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
 
   return (
     <div className="space-y-4">
+      {!readings.length && (
+        <div className="text-center p-4">
+          {token ? 'No readings available' : 'Waiting for authentication...'}
+        </div>
+      )}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
