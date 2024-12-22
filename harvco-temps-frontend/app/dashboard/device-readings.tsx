@@ -109,21 +109,21 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
       .filter((reading) => reading.reading_type === type)
       .map((reading) => {
         try {
-          // Log the incoming timestamp for debugging
-          console.log('Raw timestamp:', reading.timestamp)
-          
-          // Parse the timestamp, ensuring UTC
+          console.log('Raw timestamp:', reading.timestamp);
           const timestamp = reading.timestamp.endsWith('Z') 
             ? reading.timestamp 
-            : reading.timestamp + 'Z'
+            : reading.timestamp + 'Z';
+          console.log('Normalized timestamp:', timestamp);
           
-          // Create the date object
-          const date = new Date(timestamp)
-          
-          // Validate the date
+          const date = new Date(timestamp);
+          console.log('Date object:', date);
+          console.log('Date ISO string:', date.toISOString());
+          console.log('Local string:', date.toString());
+          console.log('Timezone offset (minutes):', date.getTimezoneOffset());
+
           if (isNaN(date.getTime())) {
-            console.error('Invalid date created from timestamp:', timestamp)
-            return null
+            console.error('Invalid date created from timestamp:', timestamp);
+            return null;
           }
 
           return {
