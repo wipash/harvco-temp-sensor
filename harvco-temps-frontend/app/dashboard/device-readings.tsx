@@ -32,7 +32,7 @@ const getEndOfDay = (date: Date) => {
 
 export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   const [date, setDate] = useState<DateRange | undefined>({
-    from: addDays(new Date(), -7),
+    from: addDays(new Date(), -1),
     to: new Date(),
   })
   const [readings, setReadings] = useState<Reading[]>([])
@@ -107,25 +107,17 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   }, [device.id, date, token, toast])
 
   const formatReadings = (type: ReadingType) => {
-    console.log('Starting formatReadings for type:', type);
     return readings
       .filter((reading) => reading.reading_type === type)
       .map((reading) => {
         try {
-          console.log('\nProcessing reading:', reading);
-          console.log('Raw timestamp:', reading.timestamp);
-          
+
           const date = new Date(reading.timestamp);
-          console.log('Date object:', date);
-          console.log('Date.getTime():', date.getTime());
-          console.log('Local date string:', date.toString());
-          console.log('UTC string:', date.toUTCString());
-          
+
           const result = {
             timestamp: date.getTime(),
             value: reading.value,
           };
-          console.log('Returning formatted reading:', result);
           return result;
         } catch (e) {
           console.error('Error processing reading:', reading, e);
@@ -230,8 +222,8 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <CardTitle>Readings for {device.name || device.device_id}</CardTitle>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={refreshData}
                 title="Refresh data"
@@ -259,7 +251,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                           {type === "temperature" ? "°C" : "%"}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Last received: {latestReadings[type]?.timestamp 
+                          Last received: {latestReadings[type]?.timestamp
                             ? (() => {
                                 try {
                                   const date = new Date(latestReadings[type]?.timestamp || '')
@@ -301,9 +293,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                         tickFormatter={(value) => {
                           if (!value) return '';
                           try {
-                            console.log('XAxis formatting value:', value);
                             const formatted = format(value, "HH:mm");
-                            console.log('XAxis formatted result:', formatted);
                             return formatted;
                           } catch (e) {
                             console.error('Error formatting tick:', value, e);
