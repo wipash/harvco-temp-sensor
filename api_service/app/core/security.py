@@ -23,10 +23,19 @@ def create_password_hash(password: str) -> str:
         Hashed password string
         
     Raises:
-        ValueError: If password is empty
+        ValueError: If password is empty, too short, or doesn't meet complexity requirements
     """
     if not password:
         raise ValueError("Password cannot be empty")
+    if password.isspace():
+        raise ValueError("Password cannot be only whitespace")
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters")
+    if not any(c.isupper() for c in password) or \
+       not any(c.islower() for c in password) or \
+       not any(c.isdigit() for c in password):
+        raise ValueError("Password must contain at least one uppercase letter, one lowercase letter, and one number")
+    
     return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

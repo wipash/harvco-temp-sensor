@@ -42,6 +42,25 @@ class TestPasswordHashing:
         with pytest.raises(ValueError, match="Password cannot be empty"):
             create_password_hash("")
 
+    def test_password_minimum_length(self):
+        """Test handling of very short passwords"""
+        with pytest.raises(ValueError, match="Password must be at least 8 characters"):
+            create_password_hash("short")
+
+    def test_password_whitespace_handling(self):
+        """Test handling of passwords with only whitespace"""
+        with pytest.raises(ValueError, match="Password cannot be only whitespace"):
+            create_password_hash("   \n\t   ")
+
+    def test_password_complexity(self):
+        """Test that hashed passwords meet minimum complexity requirements"""
+        # Should pass
+        create_password_hash("StrongPass123!")
+        
+        # Should fail
+        with pytest.raises(ValueError, match="Password must contain"):
+            create_password_hash("onlylowercase")
+
 class TestJWTTokens:
     def test_access_token_creation(self):
         """Test creation of access tokens"""
@@ -124,12 +143,51 @@ class TestJWTTokens:
         decoded = decode_token(token, verify_exp=False)
         assert decoded["sub"] == "test"
 
+    def test_token_subject_validation(self):
+        """Test validation of token subjects"""
+        # Test various subject types
+        subjects = [123, "user@example.com", "username-123"]
+        for subject in subjects:
+            token = create_access_token(subject=subject)
+            decoded = decode_token(token)
+            assert str(subject) == decoded["sub"]
+
+    def test_token_tampering(self):
+        """Test detection of tampered tokens"""
+        token = create_access_token(subject="test")
+        # Modify the middle (payload) section of the token
+        parts = token.split('.')
+        parts[1] = parts[1][:-4] + "XXXX"  # Tamper with the payload
+        tampered_token = '.'.join(parts)
+        
+        with pytest.raises(jwt.InvalidTokenError):
+            decode_token(tampered_token)
+
 @pytest.fixture
 def mock_settings(monkeypatch):
     """Fixture to modify settings for tests"""
     monkeypatch.setattr(settings, "SECRET_KEY", "test_secret_key")
     monkeypatch.setattr(settings, "ACCESS_TOKEN_EXPIRE_MINUTES", 30)
     return settings
+
+class TestSecurityHeaders:
+    def test_password_hash_timing(self):
+        """Test that password hashing has consistent timing"""
+        import time
+        password = "test_password123"
+        
+        # Measure multiple hash operations to ensure consistent timing
+        timings = []
+        for _ in range(10):
+            start = time.perf_counter()
+            create_password_hash(password)
+            end = time.perf_counter()
+            timings.append(end - start)
+            
+        # Check timing consistency (within reasonable bounds)
+        avg_time = sum(timings) / len(timings)
+        for timing in timings:
+            assert abs(timing - avg_time) < 0.1  # 100ms variance allowed
 
 def test_settings_integration(mock_settings):
     """Test integration with application settings"""
