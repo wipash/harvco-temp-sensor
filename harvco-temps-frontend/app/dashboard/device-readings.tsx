@@ -26,14 +26,6 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   const [stats, setStats] = useState<{ [key in ReadingType]?: ReadingStatistics }>({})
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (date?.from && date?.to) {
-      fetchReadings()
-      fetchStatistics("temperature")
-      fetchStatistics("humidity")
-    }
-  }, [date, fetchReadings, fetchStatistics])
-
   const fetchReadings = useCallback(async () => {
     try {
       const params = new URLSearchParams({
@@ -116,6 +108,15 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
     return currentReading?.value
   }
+
+  useEffect(() => {
+    if (date?.from && date?.to) {
+      fetchReadings()
+      fetchStatistics("temperature")
+      fetchStatistics("humidity")
+    }
+  }, [date, fetchReadings, fetchStatistics])
+
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const CustomTooltip = ({ active, payload, label }: any) => {
