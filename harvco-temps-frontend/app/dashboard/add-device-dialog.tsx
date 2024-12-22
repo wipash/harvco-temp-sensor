@@ -53,7 +53,7 @@ export function AddDeviceDialog({ open, onOpenChange, token, onSuccess }: AddDev
       })
       onSuccess()
       setDeviceId("")
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to add device",

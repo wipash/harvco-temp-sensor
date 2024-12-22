@@ -49,7 +49,7 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Welcome to Harvco Temps</CardTitle>
+          <CardTitle>Welcome to Harvco Sensor Hub</CardTitle>
           <CardDescription>Sign in to monitor your devices</CardDescription>
         </CardHeader>
         <CardContent>
