@@ -122,7 +122,7 @@ export default function DashboardPage() {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-medium">{device.name || device.device_id}</p>
-                        <p className="text-sm text-gray-500">{device.device_id}</p>
+                        <p className="text-xs text-gray-500">Device ID: {device.device_id}</p>
                       </div>
                       <Button
                         variant="ghost"
