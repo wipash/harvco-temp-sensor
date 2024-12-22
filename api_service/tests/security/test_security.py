@@ -140,7 +140,9 @@ def test_settings_integration(mock_settings):
     assert decoded["sub"] == "test"
 
     # Verify expiration time matches settings
-    exp_time = datetime.fromtimestamp(decoded["exp"])
+    # Convert exp timestamp to UTC datetime for consistent comparison
+    exp_time = datetime.utcfromtimestamp(decoded["exp"])
     expected_exp = datetime.utcnow() + timedelta(minutes=mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    
     # Allow 5 seconds tolerance
     assert abs((exp_time - expected_exp).total_seconds()) < 5
