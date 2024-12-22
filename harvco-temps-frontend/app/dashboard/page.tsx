@@ -89,7 +89,7 @@ export default function DashboardPage() {
               alt="Harvco Logo"
               width={40}
               height={40}
-              className="dark:invert"
+              className="dark:invert rounded-lg"
             />
             <h1 className="text-2xl font-bold">Dashboard</h1>
           </div>

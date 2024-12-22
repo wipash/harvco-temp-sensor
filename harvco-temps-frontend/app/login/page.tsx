@@ -44,7 +44,7 @@ export default function LoginPage() {
           alt="Harvco Logo"
           width={120}
           height={120}
-          className="dark:invert"
+          className="dark:invert rounded-xl"
         />
       </div>
       <Card className="w-full max-w-md">
