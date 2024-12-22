@@ -1,0 +1,1111 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Sensor Monitoring API",
+    "description": "API for managing sensor devices and readings",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["authentication"],
+        "summary": "Login",
+        "description": "OAuth2 compatible token login, get an access token and refresh token for future requests.",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_api_v1_auth_login_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Token" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": ["authentication"],
+        "summary": "Refresh Token",
+        "description": "Get new access token using refresh token.",
+        "operationId": "refresh_token_api_v1_auth_refresh_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Token" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/test-token": {
+      "post": {
+        "tags": ["authentication"],
+        "summary": "Test Token",
+        "description": "Test access token by returning current user.\n\nArgs:\n    current_user: Current authenticated user from token\n    \nReturns:\n    dict: Message confirming token is valid",
+        "operationId": "test_token_api_v1_auth_test_token_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      }
+    },
+    "/api/v1/users": {
+      "post": {
+        "tags": ["users"],
+        "summary": "Create User",
+        "description": "Create new user.\n\nArgs:\n    db: Database session\n    user_in: User creation data\n    \nReturns:\n    User: Created user\n    \nRaises:\n    HTTPException: If user with this email already exists",
+        "operationId": "create_user_api_v1_users_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UserCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserOut" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["users"],
+        "summary": "Read Users",
+        "description": "Retrieve users. Only for superusers.\n\nArgs:\n    db: Database session\n    current_user: Current authenticated superuser\n    pagination: Pagination parameters\n    \nReturns:\n    List[User]: List of users",
+        "operationId": "read_users_api_v1_users_get",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/UserOut" },
+                  "title": "Response Read Users Api V1 Users Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": ["users"],
+        "summary": "Read User Me",
+        "description": "Get current user.\n\nArgs:\n    db: Database session\n    current_user: Current authenticated user\n    \nReturns:\n    User: Current user with their devices",
+        "operationId": "read_user_me_api_v1_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserWithDevices" }
+              }
+            }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      }
+    },
+    "/api/v1/users/me/devices": {
+      "get": {
+        "tags": ["users"],
+        "summary": "Read User Devices",
+        "description": "Get current user's devices.\n\nArgs:\n    db: Database session\n    current_user: Current authenticated user\n    pagination: Pagination parameters\n    \nReturns:\n    List[DeviceOut]: List of user's devices",
+        "operationId": "read_user_devices_api_v1_users_me_devices_get",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/DeviceOut" },
+                  "title": "Response Read User Devices Api V1 Users Me Devices Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{user_id}": {
+      "get": {
+        "tags": ["users"],
+        "summary": "Read User By Id",
+        "description": "Get user by ID. Only for superusers.\n\nArgs:\n    user_id: User ID\n    current_user: Current authenticated superuser\n    db: Database session\n    \nReturns:\n    User: User with their devices\n    \nRaises:\n    HTTPException: If user not found",
+        "operationId": "read_user_by_id_api_v1_users__user_id__get",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "title": "User Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserWithDevices" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["users"],
+        "summary": "Deactivate User",
+        "description": "Deactivate a user. Only for superusers.\n\nArgs:\n    user_id: User ID to deactivate\n    current_user: Current authenticated superuser\n    db: Database session\n    \nReturns:\n    User: Deactivated user\n    \nRaises:\n    HTTPException: If user not found",
+        "operationId": "deactivate_user_api_v1_users__user_id__delete",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "title": "User Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserOut" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices": {
+      "post": {
+        "tags": ["devices"],
+        "summary": "Create Device",
+        "description": "Create new device.\n\nArgs:\n    db: Database session\n    device_in: Device creation data\n    current_user: Current authenticated user\n\nReturns:\n    DeviceOut: Created device\n\nRaises:\n    HTTPException: If device with this device_id already exists",
+        "operationId": "create_device_api_v1_devices_post",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeviceCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeviceOut" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["devices"],
+        "summary": "Read Devices",
+        "description": "Retrieve current user's devices.\n\nArgs:\n    db: Database session\n    current_user: Current authenticated user\n    pagination: Pagination parameters\n    include_inactive: Whether to include inactive devices\n\nReturns:\n    List[DeviceOut]: List of devices",
+        "operationId": "read_devices_api_v1_devices_get",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "include_inactive",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include inactive devices",
+              "default": false,
+              "title": "Include Inactive"
+            },
+            "description": "Include inactive devices"
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/DeviceOut" },
+                  "title": "Response Read Devices Api V1 Devices Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{device_id}": {
+      "get": {
+        "tags": ["devices"],
+        "summary": "Read Device",
+        "description": "Get device by ID.\n\nArgs:\n    device_id: Device ID\n    db: Database session\n    current_user: Current authenticated user\n\nReturns:\n    DeviceOut: Device information\n\nRaises:\n    HTTPException: If device not found or user doesn't own it",
+        "operationId": "read_device_api_v1_devices__device_id__get",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "title": "Device Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeviceOut" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["devices"],
+        "summary": "Update Device",
+        "description": "Update device.\n\nArgs:\n    device_id: Device ID to update\n    device_in: Update data\n    db: Database session\n    current_user: Current authenticated user\n\nReturns:\n    DeviceOut: Updated device\n\nRaises:\n    HTTPException: If device not found or user doesn't own it",
+        "operationId": "update_device_api_v1_devices__device_id__put",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "title": "Device Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeviceUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeviceOut" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["devices"],
+        "summary": "Delete Device",
+        "description": "Deactivate device.\n\nArgs:\n    device_id: Device ID to deactivate\n    db: Database session\n    current_user: Current authenticated user\n\nReturns:\n    DeviceOut: Deactivated device\n\nRaises:\n    HTTPException: If device not found or user doesn't own it",
+        "operationId": "delete_device_api_v1_devices__device_id__delete",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "title": "Device Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeviceOut" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/bulk-update-status": {
+      "post": {
+        "tags": ["devices"],
+        "summary": "Bulk Update Device Status",
+        "description": "Bulk update device status. Superuser only.\n\nArgs:\n    device_ids: List of device IDs to update\n    is_active: New active status\n    db: Database session\n    current_user: Current authenticated superuser\n\nReturns:\n    List[DeviceOut]: List of updated devices",
+        "operationId": "bulk_update_device_status_api_v1_devices_bulk_update_status_post",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "is_active",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "boolean", "title": "Is Active" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "integer" },
+                "title": "Device Ids"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/DeviceOut" },
+                  "title": "Response Bulk Update Device Status Api V1 Devices Bulk Update Status Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/readings": {
+      "get": {
+        "tags": ["readings"],
+        "summary": "Read Readings",
+        "description": "Retrieve readings with optional filters.\n\nArgs:\n    db: Database session\n    current_user: Current authenticated user\n    pagination: Pagination parameters\n    date_range: Date range filter\n    device_id: Optional device ID filter\n    reading_type: Optional reading type filter\n\nReturns:\n    List[ReadingOut]: List of readings\n\nRaises:\n    HTTPException: If device_id is provided and user doesn't own the device",
+        "operationId": "read_readings_api_v1_readings_get",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "description": "Filter by device ID",
+              "title": "Device Id"
+            },
+            "description": "Filter by device ID"
+          },
+          {
+            "name": "reading_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "$ref": "#/components/schemas/ReadingType" },
+                { "type": "null" }
+              ],
+              "description": "Filter by reading type",
+              "title": "Reading Type"
+            },
+            "description": "Filter by reading type"
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "format": "date-time" },
+                { "type": "null" }
+              ],
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "format": "date-time" },
+                { "type": "null" }
+              ],
+              "title": "End Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ReadingOut" },
+                  "title": "Response Read Readings Api V1 Readings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/readings/statistics": {
+      "get": {
+        "tags": ["readings"],
+        "summary": "Get Reading Statistics",
+        "description": "Get statistics for readings from a specific device.\n\nArgs:\n    db: Database session\n    current_user: Current authenticated user\n    date_range: Date range for statistics\n    device_id: Device ID\n    reading_type: Reading type\n\nReturns:\n    ReadingStatistics: Reading statistics\n\nRaises:\n    HTTPException: If user doesn't own the device",
+        "operationId": "get_reading_statistics_api_v1_readings_statistics_get",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "description": "Device ID",
+              "title": "Device Id"
+            },
+            "description": "Device ID"
+          },
+          {
+            "name": "reading_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ReadingType",
+              "description": "Reading type"
+            },
+            "description": "Reading type"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "format": "date-time" },
+                { "type": "null" }
+              ],
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "format": "date-time" },
+                { "type": "null" }
+              ],
+              "title": "End Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadingStatistics" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/readings/latest": {
+      "get": {
+        "tags": ["readings"],
+        "summary": "Get Latest Reading",
+        "description": "Get the latest reading from a specific device.\n\nArgs:\n    db: Database session\n    current_user: Current authenticated user\n    device_id: Device ID\n    reading_type: Optional reading type filter\n\nReturns:\n    ReadingOut: Latest reading\n\nRaises:\n    HTTPException: If user doesn't own the device or no readings found",
+        "operationId": "get_latest_reading_api_v1_readings_latest_get",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "description": "Device ID",
+              "title": "Device Id"
+            },
+            "description": "Device ID"
+          },
+          {
+            "name": "reading_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "$ref": "#/components/schemas/ReadingType" },
+                { "type": "null" }
+              ],
+              "description": "Reading type",
+              "title": "Reading Type"
+            },
+            "description": "Reading type"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadingOut" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/readings/device-averages": {
+      "get": {
+        "tags": ["readings"],
+        "summary": "Get Device Averages",
+        "description": "Get average readings for all devices user has access to.\n\nArgs:\n    db: Database session\n    current_user: Current authenticated user\n    date_range: Date range for averages\n    reading_type: Reading type\n\nReturns:\n    List[dict]: List of device averages",
+        "operationId": "get_device_averages_api_v1_readings_device_averages_get",
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "reading_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ReadingType",
+              "description": "Reading type"
+            },
+            "description": "Reading type"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "format": "date-time" },
+                { "type": "null" }
+              ],
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "format": "date-time" },
+                { "type": "null" }
+              ],
+              "title": "End Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" },
+                  "title": "Response Get Device Averages Api V1 Readings Device Averages Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_login_api_v1_auth_login_post": {
+        "properties": {
+          "grant_type": {
+            "anyOf": [
+              { "type": "string", "pattern": "password" },
+              { "type": "null" }
+            ],
+            "title": "Grant Type"
+          },
+          "username": { "type": "string", "title": "Username" },
+          "password": { "type": "string", "title": "Password" },
+          "scope": { "type": "string", "title": "Scope", "default": "" },
+          "client_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Client Secret"
+          }
+        },
+        "type": "object",
+        "required": ["username", "password"],
+        "title": "Body_login_api_v1_auth_login_post"
+      },
+      "DeviceCreate": {
+        "properties": {
+          "device_id": { "type": "string", "title": "Device Id" },
+          "name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Name"
+          },
+          "is_active": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Is Active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": ["device_id"],
+        "title": "DeviceCreate"
+      },
+      "DeviceOut": {
+        "properties": {
+          "device_id": { "type": "string", "title": "Device Id" },
+          "name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Name"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "id": { "type": "integer", "title": "Id" },
+          "owner_id": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Owner Id"
+          }
+        },
+        "type": "object",
+        "required": ["device_id", "id"],
+        "title": "DeviceOut"
+      },
+      "DeviceUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Name"
+          },
+          "is_active": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "title": "DeviceUpdate"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": { "$ref": "#/components/schemas/ValidationError" },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ReadingOut": {
+        "properties": {
+          "reading_type": { "$ref": "#/components/schemas/ReadingType" },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "The sensor reading value"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": ["reading_type", "value", "timestamp"],
+        "title": "ReadingOut",
+        "description": "Schema for reading output data."
+      },
+      "ReadingStatistics": {
+        "properties": {
+          "min": { "type": "number", "title": "Min" },
+          "max": { "type": "number", "title": "Max" },
+          "avg": { "type": "number", "title": "Avg" },
+          "count": { "type": "integer", "title": "Count" }
+        },
+        "type": "object",
+        "required": ["min", "max", "avg", "count"],
+        "title": "ReadingStatistics",
+        "description": "Schema for reading statistics."
+      },
+      "ReadingType": {
+        "type": "string",
+        "enum": ["temperature", "humidity"],
+        "title": "ReadingType"
+      },
+      "Token": {
+        "properties": {
+          "access_token": { "type": "string", "title": "Access Token" },
+          "token_type": { "type": "string", "title": "Token Type" }
+        },
+        "type": "object",
+        "required": ["access_token", "token_type"],
+        "title": "Token",
+        "description": "Schema for access token response."
+      },
+      "UserCreate": {
+        "properties": {
+          "email": { "type": "string", "format": "email", "title": "Email" },
+          "is_active": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Is Active",
+            "default": true
+          },
+          "is_superuser": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Is Superuser",
+            "default": false
+          },
+          "password": { "type": "string", "title": "Password" }
+        },
+        "type": "object",
+        "required": ["email", "password"],
+        "title": "UserCreate",
+        "description": "Schema for creating a new user."
+      },
+      "UserOut": {
+        "properties": {
+          "email": { "type": "string", "format": "email", "title": "Email" },
+          "is_active": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Is Active",
+            "default": true
+          },
+          "is_superuser": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Is Superuser",
+            "default": false
+          },
+          "id": { "type": "integer", "title": "Id" }
+        },
+        "type": "object",
+        "required": ["email", "id"],
+        "title": "UserOut",
+        "description": "Schema for user output data."
+      },
+      "UserWithDevices": {
+        "properties": {
+          "email": { "type": "string", "format": "email", "title": "Email" },
+          "is_active": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Is Active",
+            "default": true
+          },
+          "is_superuser": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Is Superuser",
+            "default": false
+          },
+          "id": { "type": "integer", "title": "Id" },
+          "devices": {
+            "items": { "$ref": "#/components/schemas/DeviceOut" },
+            "type": "array",
+            "title": "Devices",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": ["email", "id"],
+        "title": "UserWithDevices",
+        "description": "Schema for user output data including devices."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": { "anyOf": [{ "type": "string" }, { "type": "integer" }] },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": { "type": "string", "title": "Message" },
+          "type": { "type": "string", "title": "Error Type" }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": { "scopes": {}, "tokenUrl": "/api/v1/auth/login" }
+        }
+      }
+    }
+  }
+}
