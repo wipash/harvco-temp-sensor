@@ -297,3 +297,126 @@ class TestUserCRUD:
             obj_in=update_data
         )
         assert not await crud_user.is_superuser(updated_user)
+
+    async def test_get_by_email_not_found(self, db_session: AsyncSession):
+        """Test getting a user by email that doesn't exist."""
+        non_existent_user = await crud_user.get_by_email(
+            db_session,
+            email="nonexistent@example.com"
+        )
+        assert non_existent_user is None
+
+    async def test_create_duplicate_email(self, db_session: AsyncSession):
+        """Test creating a user with duplicate email."""
+        user_data = {
+            "email": "duplicate@example.com",
+            "password": "password123",
+            "is_active": True
+        }
+        
+        # Create first user
+        user_in = UserCreate(**user_data)
+        await crud_user.create(db_session, obj_in=user_in)
+        
+        # Attempt to create second user with same email
+        with pytest.raises(Exception):  # Adjust exception type based on your DB constraints
+            await crud_user.create(db_session, obj_in=user_in)
+
+    async def test_password_update(self, db_session: AsyncSession):
+        """Test updating user's password."""
+        # Create user
+        user_in = UserCreate(
+            email="passwordupdate@example.com",
+            password="oldpassword123",
+            is_active=True
+        )
+        user = await crud_user.create(db_session, obj_in=user_in)
+        
+        # Update password
+        new_password = "newpassword123"
+        update_data = {"password": new_password}
+        updated_user = await crud_user.update(
+            db_session,
+            db_obj=user,
+            obj_in=update_data
+        )
+        
+        # Verify old password no longer works
+        old_auth = await crud_user.authenticate(
+            db_session,
+            email=user.email,
+            password="oldpassword123"
+        )
+        assert old_auth is None
+        
+        # Verify new password works
+        new_auth = await crud_user.authenticate(
+            db_session,
+            email=user.email,
+            password=new_password
+        )
+        assert new_auth is not None
+        assert new_auth.id == user.id
+
+    async def test_partial_update(self, db_session: AsyncSession):
+        """Test partial update of user attributes."""
+        user_in = UserCreate(
+            email="partial@example.com",
+            password="password123",
+            is_active=True,
+            is_superuser=False
+        )
+        user = await crud_user.create(db_session, obj_in=user_in)
+        
+        # Update only email
+        update_data = {"email": "newemail@example.com"}
+        updated_user = await crud_user.update(
+            db_session,
+            db_obj=user,
+            obj_in=update_data
+        )
+        
+        assert updated_user.email == "newemail@example.com"
+        assert updated_user.is_active == user.is_active  # Should remain unchanged
+        assert updated_user.is_superuser == user.is_superuser  # Should remain unchanged
+
+    async def test_get_multi_pagination_edge_cases(self, db_session: AsyncSession):
+        """Test pagination edge cases for get_multi."""
+        # Create 5 users
+        for i in range(5):
+            user_in = UserCreate(
+                email=f"pagination{i}@example.com",
+                password="password123",
+                is_active=True
+            )
+            await crud_user.create(db_session, obj_in=user_in)
+        
+        # Test zero skip
+        users = await crud_user.get_multi(db_session, skip=0, limit=2)
+        assert len(users) == 2
+        
+        # Test skip > total records
+        users = await crud_user.get_multi(db_session, skip=10, limit=2)
+        assert len(users) == 0
+        
+        # Test large limit
+        users = await crud_user.get_multi(db_session, skip=0, limit=1000)
+        assert len(users) == 5
+
+    async def test_authenticate_inactive_user(self, db_session: AsyncSession):
+        """Test authentication with inactive user."""
+        # Create inactive user
+        user_in = UserCreate(
+            email="inactive@example.com",
+            password="password123",
+            is_active=False
+        )
+        user = await crud_user.create(db_session, obj_in=user_in)
+        
+        # Attempt authentication
+        auth_result = await crud_user.authenticate(
+            db_session,
+            email=user.email,
+            password="password123"
+        )
+        assert auth_result is None
