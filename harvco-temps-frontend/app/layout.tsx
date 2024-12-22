@@ -12,12 +12,14 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <AuthProvider>
-        {children}
-        <Toaster />
-      </AuthProvider>
-    </>
+    <html lang="en" className={inter.className}>
+      <body>
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
+      </body>
+    </html>
   )
 }
 
