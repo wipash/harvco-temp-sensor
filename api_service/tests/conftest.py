@@ -4,11 +4,10 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from typing import AsyncGenerator, Generator
-from unittest.mock import patch
 from app.models.user import User
 
 from app.db.base import Base
-from app.core.config import Settings, settings
+from app.core.config import settings
 
 # Test database URL for SQLite
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -47,13 +46,13 @@ async def test_engine():
         echo=False,
         future=True
     )
-    
+
     # Create tables once at the start of test session
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     yield engine
-    
+
     # Clean up at the end of test session
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -67,7 +66,7 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
         class_=AsyncSession,
         expire_on_commit=False
     )
-    
+
     async with async_session() as session:
         try:
             yield session

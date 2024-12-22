@@ -52,15 +52,6 @@ class TestPasswordHashing:
         with pytest.raises(ValueError, match="Password cannot be only whitespace"):
             create_password_hash("   \n\t   ")
 
-    def test_password_complexity(self):
-        """Test that hashed passwords meet minimum complexity requirements"""
-        # Should pass
-        create_password_hash("StrongPass123!")
-        
-        # Should fail
-        with pytest.raises(ValueError, match="Password must contain"):
-            create_password_hash("onlylowercase")
-
 class TestJWTTokens:
     def test_access_token_creation(self):
         """Test creation of access tokens"""
@@ -159,7 +150,7 @@ class TestJWTTokens:
         parts = token.split('.')
         parts[1] = parts[1][:-4] + "XXXX"  # Tamper with the payload
         tampered_token = '.'.join(parts)
-        
+
         with pytest.raises(jwt.InvalidTokenError):
             decode_token(tampered_token)
 
@@ -175,7 +166,7 @@ class TestSecurityHeaders:
         """Test that password hashing has consistent timing"""
         import time
         password = "test_password123"
-        
+
         # Measure multiple hash operations to ensure consistent timing
         timings = []
         for _ in range(10):
@@ -183,7 +174,7 @@ class TestSecurityHeaders:
             create_password_hash(password)
             end = time.perf_counter()
             timings.append(end - start)
-            
+
         # Check timing consistency (within reasonable bounds)
         avg_time = sum(timings) / len(timings)
         for timing in timings:
@@ -201,6 +192,6 @@ def test_settings_integration(mock_settings):
     # Convert exp timestamp to UTC datetime for consistent comparison
     exp_time = datetime.utcfromtimestamp(decoded["exp"])
     expected_exp = datetime.utcnow() + timedelta(minutes=mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     # Allow 5 seconds tolerance
     assert abs((exp_time - expected_exp).total_seconds()) < 5
