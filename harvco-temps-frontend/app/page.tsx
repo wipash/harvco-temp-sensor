@@ -6,16 +6,18 @@ import { useAuth } from "@/contexts/auth-context"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 export default function HomePage() {
-  const { token } = useAuth()
+  const { token, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (token) {
-      router.push("/dashboard")
-    } else {
-      router.push("/login")
+    if (!isLoading) {
+      if (token) {
+        router.replace("/dashboard")
+      } else {
+        router.replace("/login")
+      }
     }
-  }, [token, router])
+  }, [token, isLoading, router])
 
   return <LoadingSpinner />
 }
