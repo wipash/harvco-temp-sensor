@@ -47,11 +47,16 @@ async def test_engine():
         future=True
     )
     
+    # Import all models to ensure they are registered with Base
+    from app.models import User, Device, Reading
+    
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(Base.metadata.drop_all)  # Clean slate
+        await conn.run_sync(Base.metadata.create_all)  # Create all tables
     
     yield engine
     
+    # Cleanup after all tests
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     
@@ -98,3 +103,19 @@ def reading_create_data():
         "value": 23.5,
         "device_id": "test-device-001"
     }
+
+@pytest_asyncio.fixture
+async def test_user(db_session: AsyncSession) -> User:
+    """Create a test user."""
+    from app.crud.crud_user import user as crud_user
+    from app.schemas.user import UserCreate
+    
+    user_in = UserCreate(
+        email="test@example.com",
+        password="testpassword123",
+        is_active=True,
+        is_superuser=False
+    )
+    
+    db_user = await crud_user.create(db_session, obj_in=user_in)
+    return db_user
