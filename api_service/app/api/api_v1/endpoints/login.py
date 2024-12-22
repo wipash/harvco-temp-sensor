@@ -29,6 +29,7 @@ router = APIRouter()
 
 @router.post("/login", response_model=Token)
 async def login(
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ) -> JSONResponse:
@@ -76,15 +77,25 @@ async def login(
         }
     )
 
+    # Debug logging
+    print("Setting refresh token cookie:", refresh_token)
+    print("Cookie parameters:", {
+        "httponly": True,
+        "secure": False,
+        "samesite": "lax",
+        "max_age": REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        "path": "/api/v1/auth/refresh"
+    })
+
     # Set refresh token in HTTP-only cookie
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,  # Enable in production with HTTPS
+        secure=False,  # Disabled for local development
         samesite="lax",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # in seconds
-        path="/api/v1/refresh"  # Only sent to refresh endpoint
+        path="/api/v1/auth/refresh"  # Match exact endpoint path
     )
 
     return response
