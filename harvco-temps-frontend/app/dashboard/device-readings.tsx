@@ -24,22 +24,15 @@ interface DeviceReadingsProps {
 
 type ReadingType = "temperature" | "humidity"
 
-const mounted = useRef(true)
-const { token, fetchWithToken } = useAuth()
-
-useEffect(() => {
-  return () => {
-    mounted.current = false
-  }
-}, [])
-
 const getEndOfDay = (date: Date) => {
   const endOfDay = new Date(date)
   endOfDay.setHours(23, 59, 59, 999)
   return endOfDay
 }
 
-export function DeviceReadings({ device, token }: DeviceReadingsProps) {
+export function DeviceReadings({ device }: DeviceReadingsProps) {
+  const { token, fetchWithToken } = useAuth()
+  const mounted = useRef(true)
   const [date, setDate] = useState<DateRange | undefined>({
     from: addDays(new Date(), -1),
     to: new Date(),
@@ -48,6 +41,12 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   const [stats, setStats] = useState<{ [key in ReadingType]?: ReadingStatistics }>({})
   const [latestReadings, setLatestReadings] = useState<{ [key in ReadingType]?: LatestReading }>({})
   const { toast } = useToast()
+
+  useEffect(() => {
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   const fetchReadings = useCallback(async () => {
     if (!token || !mounted.current) return
