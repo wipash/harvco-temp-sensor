@@ -113,35 +113,33 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
 
             averaged_readings: list[Reading] = []
             current_window_start = start_date
-            current_window_end = start_date + timedelta(seconds=sampling_window_size)
-            current_window_readings = []
-
-            for reading in readings:
-                if reading.timestamp <= current_window_end:
-                    current_window_readings.append(reading)
-                else:
-                    if current_window_readings:
-                        avg_temp = sum(r.value for r in current_window_readings) / len(current_window_readings)
-                        averaged_reading = Reading(
-                            device_id=device_id,
-                            timestamp=current_window_end,
-                            value=avg_temp,
-                            reading_type=current_window_readings[0].reading_type  # Use the actual reading type from the data
-                        )
-                        averaged_readings.append(averaged_reading)
-                    current_window_start = current_window_end
-                    current_window_end = current_window_start + timedelta(seconds=sampling_window_size)
-                    current_window_readings = [reading]
-
-            # Add the last window's average
-            if current_window_readings:
-                avg_temp = sum(r.value for r in current_window_readings) / len(current_window_readings)
-                averaged_readings.append(Reading(
-                    device_id=device_id,
-                    timestamp=current_window_readings[-1].timestamp,  # Use the last actual reading's timestamp
-                    value=avg_temp,
-                    reading_type=current_window_readings[0].reading_type  # Use the actual reading type from the data
-                ))
+            
+            while current_window_start < end_date:
+                current_window_end = min(
+                    current_window_start + timedelta(seconds=sampling_window_size),
+                    end_date
+                )
+                
+                # Get readings that fall within this window
+                window_readings = [
+                    r for r in readings 
+                    if current_window_start <= r.timestamp < current_window_end
+                ]
+                
+                # Only create an averaged reading if we have data in this window
+                if window_readings:
+                    avg_value = sum(r.value for r in window_readings) / len(window_readings)
+                    # Use the middle timestamp of the actual readings in this window
+                    mid_timestamp = window_readings[len(window_readings)//2].timestamp
+                    
+                    averaged_readings.append(Reading(
+                        device_id=device_id,
+                        timestamp=mid_timestamp,
+                        value=avg_value,
+                        reading_type=window_readings[0].reading_type
+                    ))
+                
+                current_window_start = current_window_end
 
             return averaged_readings
 
