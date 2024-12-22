@@ -92,7 +92,7 @@ async def login(
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
     db: Annotated[AsyncSession, Depends(get_db)],
-    refresh_token: str = Cookie(None)
+    refresh_token: Annotated[str | None, Cookie(alias="refresh_token")] = None
 ) -> dict:
     """
     Get new access token using refresh token.
