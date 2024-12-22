@@ -105,22 +105,33 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   }, [device.id, date, token, toast])
 
   const formatReadings = (type: ReadingType) => {
+    console.log('Starting formatReadings for type:', type);
     return readings
       .filter((reading) => reading.reading_type === type)
       .map((reading) => {
         try {
+          console.log('\nProcessing reading:', reading);
+          console.log('Raw timestamp:', reading.timestamp);
+          
           const date = new Date(reading.timestamp);
-          return {
+          console.log('Date object:', date);
+          console.log('Date.getTime():', date.getTime());
+          console.log('Local date string:', date.toString());
+          console.log('UTC string:', date.toUTCString());
+          
+          const result = {
             timestamp: date.getTime(),
             value: reading.value,
-          }
+          };
+          console.log('Returning formatted reading:', result);
+          return result;
         } catch (e) {
-          console.error('Error processing reading:', reading, e)
-          return null
+          console.error('Error processing reading:', reading, e);
+          return null;
         }
       })
       .filter((reading): reading is NonNullable<typeof reading> => reading !== null)
-      .sort((a, b) => a.timestamp - b.timestamp)
+      .sort((a, b) => a.timestamp - b.timestamp);
   }
 
   const fetchLatestReadings = useCallback(async (readingType: ReadingType) => {
@@ -270,12 +281,15 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                         dataKey="timestamp"
                         tick={{ fontSize: 12 }}
                         tickFormatter={(value) => {
-                          if (!value) return ''
+                          if (!value) return '';
                           try {
-                            return format(value, "HH:mm")
+                            console.log('XAxis formatting value:', value);
+                            const formatted = format(value, "HH:mm");
+                            console.log('XAxis formatted result:', formatted);
+                            return formatted;
                           } catch (e) {
-                            console.error('Error formatting tick:', value, e)
-                            return ''
+                            console.error('Error formatting tick:', value, e);
+                            return '';
                           }
                         }}
                       />
