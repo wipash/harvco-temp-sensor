@@ -195,7 +195,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         Returns:
             bool: True if user is superuser
         """
-        return user.is_superuser
+        return bool(user.is_superuser)  # Explicitly convert to bool and return the actual value
 
     async def get_devices(
         self,
