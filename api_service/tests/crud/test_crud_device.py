@@ -167,6 +167,190 @@ class TestDeviceCRUD:
         assert len(inactive_devices) == 1
         assert inactive_devices[0].id == device.id
 
+    async def test_get_with_latest_reading(self, db_session: AsyncSession):
+        """Test retrieving a device with its latest reading."""
+        # Create device
+        device_in = DeviceCreate(
+            device_id="test-latest-reading",
+            name="Test Device",
+            is_active=True
+        )
+        device = await crud_device.create(db_session, obj_in=device_in)
+        
+        # Add multiple readings at different times
+        old_reading = Reading(
+            device_id=device.id,
+            reading_type=ReadingType.TEMPERATURE,
+            value=20.0,
+            timestamp=datetime.utcnow() - timedelta(hours=1)
+        )
+        new_reading = Reading(
+            device_id=device.id,
+            reading_type=ReadingType.TEMPERATURE,
+            value=22.0,
+            timestamp=datetime.utcnow()
+        )
+        db_session.add_all([old_reading, new_reading])
+        await db_session.commit()
+
+        # Get device with latest reading
+        device_with_reading = await crud_device.get_with_latest_reading(
+            db_session,
+            id=device.id
+        )
+        
+        assert device_with_reading is not None
+        assert len(device_with_reading.readings) > 0
+        latest_reading = max(device_with_reading.readings, key=lambda r: r.timestamp)
+        assert latest_reading.value == 22.0
+
+    async def test_bulk_update_status(self, db_session: AsyncSession):
+        """Test bulk updating device status."""
+        # Create multiple devices
+        devices = []
+        for i in range(3):
+            device_in = DeviceCreate(
+                device_id=f"bulk-test-{i}",
+                name=f"Bulk Test Device {i}",
+                is_active=True
+            )
+            device = await crud_device.create(db_session, obj_in=device_in)
+            devices.append(device)
+        
+        # Bulk deactivate devices
+        device_ids = [device.id for device in devices]
+        updated_devices = await crud_device.bulk_update_status(
+            db_session,
+            device_ids=device_ids,
+            is_active=False
+        )
+        
+        assert len(updated_devices) == 3
+        assert all(not device.is_active for device in updated_devices)
+
+    async def test_get_multi_by_owner_with_filters(self, db_session: AsyncSession):
+        """Test getting devices with various filters."""
+        # Create a test user
+        user_in = UserCreate(
+            email="devicefiltertest@example.com",
+            password="password123",
+            is_active=True
+        )
+        user = await crud_user.create(db_session, obj_in=user_in)
+        
+        # Create mix of active and inactive devices
+        devices_data = [
+            ("filter-device-1", True),
+            ("filter-device-2", False),
+            ("filter-device-3", True)
+        ]
+        
+        for device_id, is_active in devices_data:
+            device_in = DeviceCreate(
+                device_id=device_id,
+                name=f"Filter Test Device",
+                is_active=is_active
+            )
+            await crud_device.create_with_owner(
+                db_session,
+                obj_in=device_in,
+                owner_id=user.id
+            )
+        
+        # Test active only filter
+        active_devices = await crud_device.get_multi_by_owner_with_filters(
+            db_session,
+            owner_id=user.id,
+            active_only=True
+        )
+        assert len(active_devices) == 2
+        
+        # Test pagination
+        paginated_devices = await crud_device.get_multi_by_owner_with_filters(
+            db_session,
+            owner_id=user.id,
+            skip=1,
+            limit=1,
+            active_only=False
+        )
+        assert len(paginated_devices) == 1
+
+    async def test_device_duplicate_id(self, db_session: AsyncSession):
+        """Test handling of duplicate device_id creation."""
+        device_in = DeviceCreate(
+            device_id="duplicate-test",
+            name="Original Device",
+            is_active=True
+        )
+        await crud_device.create(db_session, obj_in=device_in)
+        
+        # Attempt to create device with same device_id
+        duplicate_device = DeviceCreate(
+            device_id="duplicate-test",
+            name="Duplicate Device",
+            is_active=True
+        )
+        
+        with pytest.raises(Exception):  # Should raise an integrity error
+            await crud_device.create(db_session, obj_in=duplicate_device)
+
+    async def test_device_ownership_transfer(self, db_session: AsyncSession):
+        """Test transferring device ownership between users."""
+        # Create two users
+        user1_in = UserCreate(email="user1@example.com", password="password123")
+        user2_in = UserCreate(email="user2@example.com", password="password123")
+        user1 = await crud_user.create(db_session, obj_in=user1_in)
+        user2 = await crud_user.create(db_session, obj_in=user2_in)
+        
+        # Create device owned by user1
+        device_in = DeviceCreate(
+            device_id="transfer-test",
+            name="Transfer Test Device"
+        )
+        device = await crud_device.create_with_owner(
+            db_session,
+            obj_in=device_in,
+            owner_id=user1.id
+        )
+        
+        # Transfer ownership to user2
+        update_data = {"owner_id": user2.id}
+        updated_device = await crud_device.update(
+            db_session,
+            db_obj=device,
+            obj_in=update_data
+        )
+        
+        assert updated_device.owner_id == user2.id
+        assert await crud_device.is_owner(db_session, device_id=device.id, user_id=user2.id)
+        assert not await crud_device.is_owner(db_session, device_id=device.id, user_id=user1.id)
+
+    async def test_device_name_update(self, db_session: AsyncSession):
+        """Test updating device name."""
+        device_in = DeviceCreate(
+            device_id="name-update-test",
+            name="Original Name"
+        )
+        device = await crud_device.create(db_session, obj_in=device_in)
+        
+        # Update with valid name
+        update_data = DeviceUpdate(name="New Name")
+        updated_device = await crud_device.update(
+            db_session,
+            db_obj=device,
+            obj_in=update_data
+        )
+        assert updated_device.name == "New Name"
+        
+        # Update with None (should be allowed as per schema)
+        update_data = DeviceUpdate(name=None)
+        updated_device = await crud_device.update(
+            db_session,
+            db_obj=device,
+            obj_in=update_data
+        )
+        assert updated_device.name is None
+
     async def test_get_multi_by_owner_with_filters(self, db_session: AsyncSession):
         """Test getting devices with various filters."""
         # Create owner
