@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime, timedelta
-from jose import jwt, JWTError
+import jwt
 
 from app.core.security import (
     create_password_hash,
@@ -17,7 +17,7 @@ class TestPasswordHashing:
         password = "mysecretpassword123"
         hash1 = create_password_hash(password)
         hash2 = create_password_hash(password)
-        
+
         # Same password should create different hashes
         assert hash1 != hash2
         # Hashes should be strings
@@ -47,7 +47,7 @@ class TestJWTTokens:
         """Test creation of access tokens"""
         user_id = 123
         token = create_access_token(subject=user_id)
-        
+
         # Token should be a non-empty string
         assert isinstance(token, str)
         assert len(token) > 0
@@ -65,17 +65,17 @@ class TestJWTTokens:
             subject="test",
             expires_delta=timedelta(seconds=1)
         )
-        
+
         # Token should be valid immediately
         decoded = decode_token(token)
         assert decoded["sub"] == "test"
-        
+
         # Wait for token to expire
         import time
         time.sleep(2)
-        
+
         # Token should be expired now
-        with pytest.raises(JWTError):
+        with pytest.raises(jwt.PyJWTError):
             decode_token(token)
 
     def test_custom_expiration(self):
@@ -85,10 +85,10 @@ class TestJWTTokens:
             subject="test",
             expires_delta=expires_in
         )
-        
+
         decoded = decode_token(token)
         created_at = datetime.fromtimestamp(decoded["exp"]) - expires_in
-        
+
         # Check if expiration time is approximately correct
         # (allowing 5 seconds tolerance for test execution time)
         assert abs((datetime.utcnow() - created_at).total_seconds()) < 5
@@ -96,7 +96,7 @@ class TestJWTTokens:
     def test_invalid_token_handling(self):
         """Test handling of invalid tokens"""
         # Test with malformed token
-        with pytest.raises(JWTError):
+        with pytest.raises(jwt.PyJWTError):
             decode_token("invalid.token.format")
 
         # Test with token signed with different key
@@ -105,7 +105,7 @@ class TestJWTTokens:
             "wrong_secret_key",
             algorithm=ALGORITHM
         )
-        with pytest.raises(JWTError):
+        with pytest.raises(jwt.PyJWTError):
             decode_token(wrong_token)
 
     def test_token_verification_options(self):
@@ -115,11 +115,11 @@ class TestJWTTokens:
             subject="test",
             expires_delta=timedelta(seconds=-1)
         )
-        
+
         # Should raise error with expiration verification
-        with pytest.raises(JWTError):
+        with pytest.raises(jwt.PyJWTError):
             decode_token(token, verify_exp=True)
-            
+
         # Should not raise error when skipping expiration verification
         decoded = decode_token(token, verify_exp=False)
         assert decoded["sub"] == "test"
@@ -135,10 +135,10 @@ def test_settings_integration(mock_settings):
     """Test integration with application settings"""
     token = create_access_token(subject="test")
     decoded = decode_token(token)
-    
+
     # Verify token was created with test settings
     assert decoded["sub"] == "test"
-    
+
     # Verify expiration time matches settings
     exp_time = datetime.fromtimestamp(decoded["exp"])
     expected_exp = datetime.utcnow() + timedelta(minutes=mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES)
