@@ -108,7 +108,8 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
     return readings
       .filter((reading) => reading.reading_type === type)
       .map((reading) => ({
-        timestamp: new Date(reading.timestamp), // Keep as Date object
+        // Parse the UTC timestamp and convert to local time
+        timestamp: new Date(reading.timestamp + 'Z'), // Ensure UTC parsing by adding Z if not present
         value: reading.value,
       }))
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
@@ -245,7 +246,10 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                       <XAxis
                         dataKey="timestamp"
                         tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => format(value, "HH:mm")}
+                        tickFormatter={(value) => {
+                          const date = new Date(value)
+                          return format(date, "HH:mm")
+                        }}
                       />
                       <YAxis
                         tick={{ fontSize: 12 }}
@@ -253,7 +257,10 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
                       />
                       <Tooltip
                         content={<CustomTooltip />}
-                        labelFormatter={(label) => format(label, "MMM d, yyyy HH:mm:ss")}
+                        labelFormatter={(label) => {
+                          const date = new Date(label)
+                          return format(date, "MMM d, yyyy HH:mm:ss")
+                        }}
                       />
                       <Line
                         type="monotone"
