@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range"
 import { Device, Reading, ReadingStatistics } from "@/types/device"
@@ -32,9 +32,9 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
       fetchStatistics("temperature")
       fetchStatistics("humidity")
     }
-  }, [date, device.id])
+  }, [date, fetchReadings, fetchStatistics])
 
-  const fetchReadings = async () => {
+  const fetchReadings = useCallback(async () => {
     try {
       const params = new URLSearchParams({
         device_id: device.id.toString(),
@@ -63,9 +63,9 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
         variant: "destructive",
       })
     }
-  }
+  }, [device.id, date, token, toast])
 
-  const fetchStatistics = async (readingType: ReadingType) => {
+  const fetchStatistics = useCallback(async (readingType: ReadingType) => {
     try {
       const params = new URLSearchParams({
         device_id: device.id.toString(),
@@ -98,7 +98,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
         variant: "destructive",
       })
     }
-  }
+  }, [device.id, date, token, toast])
 
   const formatReadings = (type: ReadingType) => {
     return readings
