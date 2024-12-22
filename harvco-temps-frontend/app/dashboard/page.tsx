@@ -23,15 +23,6 @@ export default function DashboardPage() {
   const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false)
   const [editingDevice, setEditingDevice] = useState<Device | null>(null)
 
-  useEffect(() => {
-    if (!token) {
-      router.push("/login")
-      return
-    }
-
-    fetchDevices()
-  }, [token, router, fetchDevices])
-
   const fetchDevices = useCallback(async () => {
     try {
       const res = await fetch(getApiUrl("/api/v1/devices"), {
@@ -78,6 +69,15 @@ export default function DashboardPage() {
       throw error
     }
   }
+
+  useEffect(() => {
+    if (!token) {
+      router.push("/login")
+      return
+    }
+
+    fetchDevices()
+  }, [token, router, fetchDevices])
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">

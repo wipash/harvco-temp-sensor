@@ -25,7 +25,7 @@ export default function LoginPage() {
     try {
       await login({ username, password })
       router.push("/dashboard")
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Invalid username or password",
