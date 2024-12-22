@@ -151,7 +151,7 @@ class TestDeviceCRUD:
         # Add an old reading
         old_reading = Reading(
             device_id=device.id,
-            reading_type=ReadingType.temperature,
+            reading_type=ReadingType.TEMPERATURE,
             value=20.0,
             timestamp=datetime.utcnow() - timedelta(days=31)
         )
