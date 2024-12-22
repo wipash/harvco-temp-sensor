@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -30,9 +30,9 @@ export default function DashboardPage() {
     }
 
     fetchDevices()
-  }, [token, router])
+  }, [token, router, fetchDevices])
 
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     try {
       const res = await fetch(getApiUrl("/api/v1/devices"), {
         headers: {
@@ -49,7 +49,7 @@ export default function DashboardPage() {
         variant: "destructive",
       })
     }
-  }
+  }, [token, toast])
 
   const updateDeviceName = async (name: string) => {
     if (!editingDevice) return
