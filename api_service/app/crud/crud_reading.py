@@ -5,11 +5,10 @@ This module implements Create, Read, Update, Delete operations for sensor readin
 the repository pattern.
 """
 
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any
 from datetime import datetime, timedelta
 from sqlalchemy import select, func, and_, not_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 
 from app.models.reading import Reading, ReadingType
