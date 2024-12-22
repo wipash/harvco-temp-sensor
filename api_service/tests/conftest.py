@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from typing import AsyncGenerator, Generator
 from unittest.mock import patch
+from app.models.user import User
 
 from app.db.base import Base
 from app.core.config import Settings, settings
