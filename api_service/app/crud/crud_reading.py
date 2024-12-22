@@ -102,9 +102,16 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         if reading_type:
             query = query.where(Reading.reading_type == reading_type)
 
+        import logging
+        logger = logging.getLogger(__name__)
+
         query = query.order_by(Reading.timestamp.desc())
         result = await db.execute(query)
         readings = list(result.scalars().all())
+
+        logger.debug(f"Total readings before averaging: {len(readings)}")
+        logger.debug(f"Time window: {start_date} to {end_date}")
+        logger.debug(f"Reading type: {reading_type}")
 
         # If the number of readings exceeds the threshold, perform averaging
         if len(readings) > threshold:
@@ -123,7 +130,8 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
                 # Get readings that fall within this window
                 window_readings = [
                     r for r in readings 
-                    if current_window_start <= r.timestamp < current_window_end
+                    if (current_window_start <= r.timestamp < current_window_end and 
+                        r.reading_type == reading_type)
                 ]
                 
                 # Only create an averaged reading if we have data in this window
@@ -141,6 +149,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
                 
                 current_window_start = current_window_end
 
+            logger.debug(f"Total averaged readings: {len(averaged_readings)}")
             return averaged_readings
 
         return readings
