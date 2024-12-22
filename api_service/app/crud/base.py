@@ -109,7 +109,12 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Returns:
             ModelType: Updated record
         """
-        obj_data = db_obj.dict()
+        # Convert SQLAlchemy model to dict using SQLAlchemy's __dict__
+        obj_data = {
+            column.key: getattr(db_obj, column.key)
+            for column in db_obj.__table__.columns
+        }
+        
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
