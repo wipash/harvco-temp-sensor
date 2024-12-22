@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range"
 import { Device, Reading, ReadingStatistics } from "@/types/device"
+
+interface LatestReading {
+  value: number
+  timestamp: string
+}
 import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import { addDays, format } from "date-fns"
 import { DateRange } from "react-day-picker"
@@ -30,6 +35,7 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
   })
   const [readings, setReadings] = useState<Reading[]>([])
   const [stats, setStats] = useState<{ [key in ReadingType]?: ReadingStatistics }>({})
+  const [latestReadings, setLatestReadings] = useState<{ [key in ReadingType]?: LatestReading }>({})
   const { toast } = useToast()
 
   const fetchReadings = useCallback(async () => {
@@ -108,11 +114,41 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
   }
 
+  const fetchLatestReadings = useCallback(async (readingType: ReadingType) => {
+    try {
+      const params = new URLSearchParams({
+        device_id: device.id.toString(),
+        reading_type: readingType,
+      })
+
+      const res = await fetch(getApiUrl(`/api/v1/readings/latest?${params}`), {
+        headers: {
+          Authorization: token,
+        },
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(JSON.stringify(errorData))
+      }
+
+      const data: LatestReading = await res.json()
+      setLatestReadings(prev => ({
+        ...prev,
+        [readingType]: data
+      }))
+    } catch (error) {
+      console.error(`Error fetching latest ${readingType} reading:`, error)
+      toast({
+        title: `Error fetching latest ${readingType} reading`,
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      })
+    }
+  }, [device.id, token, toast])
+
   const getCurrentReading = (type: ReadingType) => {
-    const currentReading = readings
-      .filter(r => r.reading_type === type)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
-    return currentReading?.value
+    return latestReadings[type]?.value
   }
 
   useEffect(() => {
@@ -120,8 +156,10 @@ export function DeviceReadings({ device, token }: DeviceReadingsProps) {
       fetchReadings()
       fetchStatistics("temperature")
       fetchStatistics("humidity")
+      fetchLatestReadings("temperature")
+      fetchLatestReadings("humidity")
     }
-  }, [date, fetchReadings, fetchStatistics])
+  }, [date, fetchReadings, fetchStatistics, fetchLatestReadings])
 
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
