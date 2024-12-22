@@ -4,12 +4,31 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from typing import AsyncGenerator, Generator
+from unittest.mock import patch
 
 from app.db.base import Base
-from app.core.config import settings
+from app.core.config import Settings, settings
 
-# Use an in-memory SQLite database for testing
+# Test database URL for SQLite
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+# Mock settings for testing
+TEST_SETTINGS = {
+    "DATABASE_URL": TEST_DATABASE_URL,
+    "MQTT_BROKER_URL": "mqtt://localhost:1883",
+    "SECRET_KEY": "test_secret_key",
+    "API_V1_STR": "/api/v1",
+    "ACCESS_TOKEN_EXPIRE_MINUTES": 60,
+    "BACKEND_CORS_ORIGINS": ["http://localhost:3000"],
+    "SQLALCHEMY_ECHO": False
+}
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_settings():
+    """Override settings for testing."""
+    with patch.object(settings, "DATABASE_URL", TEST_DATABASE_URL):
+        with patch.object(settings, "MQTT_BROKER_URL", "mqtt://localhost:1883"):
+            yield settings
 
 @pytest.fixture(scope="session")
 def event_loop() -> Generator:
