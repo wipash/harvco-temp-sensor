@@ -20,10 +20,18 @@ import { useToast } from "@/hooks/use-toast"
 
 interface DeviceReadingsProps {
   device: Device
-  token: string
 }
 
 type ReadingType = "temperature" | "humidity"
+
+const mounted = useRef(true)
+const { token, fetchWithToken } = useAuth()
+
+useEffect(() => {
+  return () => {
+    mounted.current = false
+  }
+}, [])
 
 const getEndOfDay = (date: Date) => {
   const endOfDay = new Date(date)
