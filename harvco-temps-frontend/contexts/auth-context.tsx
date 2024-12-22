@@ -23,6 +23,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const refreshToken = async (): Promise<string> => {
+    try {
+      const res = await fetch(getApiUrl("/api/v1/auth/refresh"), {
+        method: "POST",
+        credentials: "include",
+      })
+
+      if (!res.ok) {
+        throw new Error("Token refresh failed")
+      }
+
+      const data: Token = await res.json()
+      const fullToken = `${data.token_type} ${data.access_token}`
+      localStorage.setItem("token", fullToken)
+      setToken(fullToken)
+      return fullToken
+    } catch (error) {
+      console.error("Token refresh error:", error)
+      logout() // Clear auth state if refresh fails
+      throw error
+    }
+  }
+
   const login = async (credentials: LoginCredentials) => {
     try {
       const formData = new URLSearchParams()
@@ -36,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: formData,
-        credentials: "include", // Add this to handle cookies if your API uses them
+        credentials: "include",
       })
 
       if (!res.ok) {
@@ -59,6 +82,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null)
   }
 
+  const fetchWithToken = async (
+    url: string,
+    options: RequestInit = {}
+  ): Promise<Response> => {
+    const makeRequest = async (accessToken: string) => {
+      const headers = new Headers(options.headers || {})
+      headers.set("Authorization", accessToken)
+
+      return fetch(url, {
+        ...options,
+        headers,
+        credentials: "include",
+      })
+    }
+
+    try {
+      // Try the request with current token
+      if (!token) throw new Error("No token available")
+      
+      let response = await makeRequest(token)
+
+      // If unauthorized, try to refresh token and retry request
+      if (response.status === 401) {
+        const newToken = await refreshToken()
+        response = await makeRequest(newToken)
+      }
+
+      return response
+    } catch (error) {
+      console.error("API request failed:", error)
+      throw error
+    }
+  }
+
   if (isLoading) {
     return null
   }
@@ -69,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         login,
         logout,
+        fetchWithToken,
       }}
     >
       {children}
