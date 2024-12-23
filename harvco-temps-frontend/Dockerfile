@@ -1,5 +1,5 @@
 # Stage 1: Building the code
-FROM node:20-alpine AS builder
+FROM node:23-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN yarn build
 
 # Stage 2: Production image
-FROM node:20-alpine AS runner
+FROM node:23-alpine AS runner
 
 WORKDIR /app
 
@@ -28,10 +28,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Set user for security
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-RUN chown -R nextjs:nodejs /app
+# Create non-root user and set permissions in one layer
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs && \
+    chown -R nextjs:nodejs /app
+
 USER nextjs
 
 EXPOSE 3000
