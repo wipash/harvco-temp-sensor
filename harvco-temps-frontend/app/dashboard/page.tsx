@@ -143,7 +143,7 @@ export default function DashboardPage() {
 
           <div className="md:col-span-3">
             {selectedDevice ? (
-              <DeviceReadings device={selectedDevice} token={token!} />
+              <DeviceReadings device={selectedDevice} />
             ) : (
               <Card>
                 <CardContent className="p-8 text-center text-gray-500">
