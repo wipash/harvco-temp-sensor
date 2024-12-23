@@ -1,8 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect } from "react"
-import { AuthContextType, LoginCredentials, Token } from "@/types/auth"
-import { User } from "@/types/user"
+import { AuthContextType, LoginCredentials, Token, User } from "@/types/auth"
 import { getApiUrl } from "@/utils/api"
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
