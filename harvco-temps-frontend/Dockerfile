@@ -6,8 +6,8 @@ WORKDIR /app
 # Enable corepack and use correct Yarn version
 RUN corepack enable && corepack prepare yarn@4.5.3 --activate
 
-# Install dependencies
-COPY package.json yarn.lock ./
+# Copy package files first
+COPY package.json yarn.lock .yarnrc.yml ./
 RUN yarn install --immutable
 
 # Copy source code
