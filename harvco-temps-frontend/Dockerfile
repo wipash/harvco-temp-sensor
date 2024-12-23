@@ -3,9 +3,12 @@ FROM node:23-alpine AS builder
 
 WORKDIR /app
 
+# Enable corepack and use correct Yarn version
+RUN corepack enable && corepack prepare yarn@4.5.3 --activate
+
 # Install dependencies
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN yarn install --immutable
 
 # Copy source code
 COPY . .
@@ -36,7 +39,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 USER nextjs
 
 EXPOSE 3000
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
