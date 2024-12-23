@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
 
     # CORS settings if needed
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "https://sensors.harvco.nz"]
 
     SQLALCHEMY_ECHO: bool = Field(default=False, description="Enable SQLAlchemy echo for debugging SQL queries")
 
