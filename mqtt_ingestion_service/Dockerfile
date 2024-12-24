@@ -16,6 +16,7 @@ RUN apt-get update \
         gcc \
         python3-dev \
         libpq-dev \
+        bash \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy only requirements first to leverage Docker cache
@@ -23,6 +24,10 @@ COPY pyproject.toml .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir .
+
+# Copy the entrypoint script first and make it executable
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Copy application code
 COPY . .
@@ -36,8 +41,8 @@ ENV MQTT_TOPIC=
 ENV DATABASE_URL=
 ENV LOG_LEVEL=
 
-# Run the application
-CMD ["python", "main.py"]
+# Use the entrypoint script
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # Health check (optional but recommended)
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
