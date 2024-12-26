@@ -73,6 +73,13 @@ export default function DashboardPage() {
     fetchDevices()
   }, [fetchDevices])
 
+  useEffect(() => {
+    // If there are devices but no device is selected, select the first one
+    if (devices.length > 0 && !selectedDevice) {
+      setSelectedDevice(devices[0])
+    }
+  }, [devices, selectedDevice])
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-gray-50 p-4">
