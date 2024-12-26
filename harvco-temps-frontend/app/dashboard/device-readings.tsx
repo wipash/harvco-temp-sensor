@@ -33,6 +33,7 @@ const getEndOfDay = (date: Date) => {
 export function DeviceReadings({ device }: DeviceReadingsProps) {
   const { token, fetchWithToken } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
   const [date, setDate] = useState<DateRange | undefined>({
     from: addDays(new Date(), -1),
     to: new Date(),
@@ -219,6 +220,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
     if (!date?.from || !date?.to) return;
 
     const controller = new AbortController();
+    setIsInitialLoading(true);
 
     const fetchData = async () => {
       await fetchReadings(controller.signal);
@@ -228,6 +230,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
         fetchLatestReadings("temperature", controller.signal),
         fetchLatestReadings("humidity", controller.signal),
       ]);
+      setIsInitialLoading(false);
     };
 
     fetchData();
@@ -287,7 +290,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
 
   return (
     <div className="space-y-4">
-      {!readings.length && (
+      {!readings.length && !isInitialLoading && (
         <div className="text-center p-4">
           {token ? 'No readings available' : 'Waiting for authentication...'}
         </div>
