@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { AuthContextType, LoginCredentials, Token, User } from "@/types/auth"
 import { getApiUrl } from "@/utils/api"
 
@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setCurrentUser(null)
     }
-  }, [token])
+  }, [token, fetchCurrentUser])
 
   const refreshToken = async (): Promise<string> => {
     try {
@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCurrentUser(null)
   }
 
-  const fetchCurrentUser = async () => {
+  const fetchCurrentUser = useCallback(async () => {
     if (!token) return
     try {
       const response = await fetchWithToken(getApiUrl("/api/v1/users/me"))
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error fetching current user:", error)
     }
-  }
+  }, [token, fetchWithToken])
 
   const fetchWithToken = async (
     url: string,
