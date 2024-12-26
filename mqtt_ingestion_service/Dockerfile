@@ -33,13 +33,13 @@ RUN chmod +x /docker-entrypoint.sh
 COPY . .
 
 # Declare environment variables
-ENV MQTT_BROKER_URL=
-ENV MQTT_BROKER_PORT=
-ENV MQTT_USERNAME=
+ENV MQTT_BROKER_URL="mqtt.harvco.nz"
+ENV MQTT_BROKER_PORT="1883"
+ENV MQTT_USERNAME="harvcoiot"
 ENV MQTT_PASSWORD=
-ENV MQTT_TOPIC=
+ENV MQTT_TOPIC="harvco/+/sensor/+/state"
 ENV DATABASE_URL=
-ENV LOG_LEVEL=
+ENV LOG_LEVEL="INFO"
 
 # Use the entrypoint script
 ENTRYPOINT ["/docker-entrypoint.sh"]
