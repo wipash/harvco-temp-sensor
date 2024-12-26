@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { AuthGuard } from "@/components/auth-guard"
+import { useState, useCallback, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +16,6 @@ import { Pencil } from 'lucide-react'
 
 export default function DashboardPage() {
   const { token, logout } = useAuth()
-  const router = useRouter()
   const { toast } = useToast()
   const [devices, setDevices] = useState<Device[]>([])
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
@@ -71,16 +70,12 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    if (!token) {
-      router.push("/login")
-      return
-    }
-
     fetchDevices()
-  }, [token, router, fetchDevices])
+  }, [fetchDevices])
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto space-y-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
@@ -171,6 +166,7 @@ export default function DashboardPage() {
         deviceName={editingDevice?.name || ""}
         onSave={updateDeviceName}
       />
-    </div>
+      </div>
+    </AuthGuard>
   )
 }
