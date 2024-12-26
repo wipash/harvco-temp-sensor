@@ -33,28 +33,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token, fetchCurrentUser])
 
-  const refreshToken = async (): Promise<string> => {
-    try {
-      const res = await fetch(getApiUrl("/api/v1/auth/refresh"), {
-        method: "POST",
-        credentials: "include",
-      })
-
-      if (!res.ok) {
-        throw new Error("Token refresh failed")
-      }
-
-      const data: Token = await res.json()
-      const fullToken = `${data.token_type} ${data.access_token}`
-      localStorage.setItem("token", fullToken)
-      setToken(fullToken)
-      return fullToken
-    } catch (error) {
-      console.error("Token refresh error:", error)
-      logout() // Clear auth state if refresh fails
-      throw error
-    }
-  }
 
   const login = async (credentials: LoginCredentials) => {
     try {
@@ -105,6 +83,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Error fetching current user:", error)
     }
   }, [token, fetchWithToken])
+
+  const refreshToken = useCallback(async (): Promise<string> => {
+    try {
+      const res = await fetch(getApiUrl("/api/v1/auth/refresh"), {
+        method: "POST",
+        credentials: "include",
+      })
+
+      if (!res.ok) {
+        throw new Error("Token refresh failed")
+      }
+
+      const data: Token = await res.json()
+      const fullToken = `${data.token_type} ${data.access_token}`
+      localStorage.setItem("token", fullToken)
+      setToken(fullToken)
+      return fullToken
+    } catch (error) {
+      console.error("Token refresh error:", error)
+      logout() // Clear auth state if refresh fails
+      throw error
+    }
+  }, [logout])
 
   const fetchWithToken = useCallback(async (
     url: string,
