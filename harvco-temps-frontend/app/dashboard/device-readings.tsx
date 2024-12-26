@@ -209,7 +209,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [date, fetchReadings, fetchStatistics, fetchLatestReadings, token, isLoading, fetchWithToken])
+  }, [date, fetchReadings, fetchStatistics, fetchLatestReadings, token, isLoading])
 
   useEffect(() => {
     if (!date?.from || !date?.to) return;
