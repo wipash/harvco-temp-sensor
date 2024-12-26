@@ -24,14 +24,13 @@ export default function LoginPage() {
 
     try {
       await login({ username, password })
-      router.push("/dashboard")
+      await router.push("/dashboard")
     } catch {
       toast({
         title: "Error",
         description: "Invalid username or password",
         variant: "destructive",
       })
-    } finally {
       setIsLoading(false)
     }
   }
