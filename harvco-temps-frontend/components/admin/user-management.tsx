@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import {
@@ -42,7 +42,7 @@ export function UserManagement() {
     is_superuser: false,
   })
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await fetchWithToken(getApiUrl("/api/v1/users"))
       if (!response.ok) throw new Error("Failed to fetch users")
@@ -55,7 +55,7 @@ export function UserManagement() {
         variant: "destructive",
       })
     }
-  }
+  }, [fetchWithToken, toast])
 
   const createUser = async () => {
     try {
