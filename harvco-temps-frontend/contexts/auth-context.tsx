@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Try the request with current token
       if (!token) throw new Error("No token available")
-      
+
       let response = await makeRequest(token)
 
       // If unauthorized, try to refresh token and retry request
@@ -168,4 +168,3 @@ export function useAuth() {
   }
   return context
 }
-
