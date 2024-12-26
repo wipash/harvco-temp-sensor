@@ -69,13 +69,10 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
       console.log('Received readings data:', data);
       setReadings(data)
     } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        return; // Ignore abort errors
-      }
       // Silently ignore abort errors
       if (error instanceof DOMException && error.name === 'AbortError') return;
 
-      // Only show toast for non-abort errors
+      // Show toast for non-abort errors
       if (!(error instanceof DOMException) || error.name !== 'AbortError') {
         console.error("Error fetching readings:", error)
         toast({
@@ -194,7 +191,13 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
   }
 
   const refreshData = useCallback(async () => {
-    if (!token || isLoading) return
+    if (!token) return
+    
+    // Create a local loading state instead of using the shared state
+    let isRefreshing = false
+    if (isRefreshing) return
+    
+    isRefreshing = true
     setIsLoading(true)
     try {
       if (date?.from && date?.to) {
@@ -207,9 +210,10 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
         ])
       }
     } finally {
+      isRefreshing = false
       setIsLoading(false)
     }
-  }, [date, fetchReadings, fetchStatistics, fetchLatestReadings, token, isLoading])
+  }, [date, fetchReadings, fetchStatistics, fetchLatestReadings, token])
 
   useEffect(() => {
     if (!date?.from || !date?.to) return;
@@ -242,7 +246,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
     // Set up interval
     const intervalId = setInterval(() => {
       refreshData()
-    }, 60000) // 60000ms = 1 minute
+    }, 300000) // 300000ms = 5 minutes
 
     return () => clearInterval(intervalId)
   }, [token, refreshData])
