@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token, fetchCurrentUser])
 
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = useCallback(async (credentials: LoginCredentials) => {
     try {
       const formData = new URLSearchParams()
       formData.append("username", credentials.username)
@@ -63,13 +63,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Login error:", error)
       throw error
     }
-  }
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem("token")
     setToken(null)
     setCurrentUser(null)
-  }
+  }, [])
 
   const fetchCurrentUser = useCallback(async () => {
     if (!token) return
