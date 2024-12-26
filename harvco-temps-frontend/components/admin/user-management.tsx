@@ -119,7 +119,7 @@ export function UserManagement() {
 
   useEffect(() => {
     fetchUsers()
-  }, [])
+  }, [fetchUsers])
 
   return (
     <div className="space-y-6">
