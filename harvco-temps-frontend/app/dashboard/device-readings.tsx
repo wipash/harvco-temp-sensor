@@ -192,11 +192,11 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
 
   const refreshData = useCallback(async () => {
     if (!token) return
-    
+
     // Create a local loading state instead of using the shared state
     let isRefreshing = false
     if (isRefreshing) return
-    
+
     isRefreshing = true
     setIsLoading(true)
     try {
@@ -246,7 +246,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
     // Set up interval
     const intervalId = setInterval(() => {
       refreshData()
-    }, 300000) // 300000ms = 5 minutes
+    }, 60000) // 60000ms = 1 minute
 
     return () => clearInterval(intervalId)
   }, [token, refreshData])
