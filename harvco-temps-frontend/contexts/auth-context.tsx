@@ -12,77 +12,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const isSuper = currentUser?.is_superuser ?? false
 
-  useEffect(() => {
-    try {
-      const savedToken = localStorage.getItem("token")
-      if (savedToken) {
-        setToken(savedToken)
-      }
-    } catch (error) {
-      console.error("Error loading auth state:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (token) {
-      fetchCurrentUser()
-    } else {
-      setCurrentUser(null)
-    }
-  }, [token, fetchCurrentUser])
-
-
-  const login = useCallback(async (credentials: LoginCredentials) => {
-    try {
-      const formData = new URLSearchParams()
-      formData.append("username", credentials.username)
-      formData.append("password", credentials.password)
-      formData.append("grant_type", "password")
-
-      const res = await fetch(getApiUrl("/api/v1/auth/login"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData,
-        credentials: "include",
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        throw new Error(error || "Login failed")
-      }
-
-      const data: Token = await res.json()
-      const fullToken = `${data.token_type} ${data.access_token}`
-      localStorage.setItem("token", fullToken)
-      setToken(fullToken)
-    } catch (error) {
-      console.error("Login error:", error)
-      throw error
-    }
-  }, [])
-
   const logout = useCallback(() => {
     localStorage.removeItem("token")
     setToken(null)
     setCurrentUser(null)
   }, [])
-
-  const fetchCurrentUser = useCallback(async () => {
-    if (!token) return
-    try {
-      const response = await fetchWithToken(getApiUrl("/api/v1/users/me"))
-      if (response.ok) {
-        const userData = await response.json()
-        setCurrentUser(userData)
-      }
-    } catch (error) {
-      console.error("Error fetching current user:", error)
-    }
-  }, [token, fetchWithToken])
 
   const refreshToken = useCallback(async (): Promise<string> => {
     try {
@@ -140,6 +74,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error
     }
   }, [token, refreshToken])
+
+  const fetchCurrentUser = useCallback(async () => {
+    if (!token) return
+    try {
+      const response = await fetchWithToken(getApiUrl("/api/v1/users/me"))
+      if (response.ok) {
+        const userData = await response.json()
+        setCurrentUser(userData)
+      }
+    } catch (error) {
+      console.error("Error fetching current user:", error)
+    }
+  }, [token, fetchWithToken])
+
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    try {
+      const formData = new URLSearchParams()
+      formData.append("username", credentials.username)
+      formData.append("password", credentials.password)
+      formData.append("grant_type", "password")
+
+      const res = await fetch(getApiUrl("/api/v1/auth/login"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData,
+        credentials: "include",
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        throw new Error(error || "Login failed")
+      }
+
+      const data: Token = await res.json()
+      const fullToken = `${data.token_type} ${data.access_token}`
+      localStorage.setItem("token", fullToken)
+      setToken(fullToken)
+    } catch (error) {
+      console.error("Login error:", error)
+      throw error
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      const savedToken = localStorage.getItem("token")
+      if (savedToken) {
+        setToken(savedToken)
+      }
+    } catch (error) {
+      console.error("Error loading auth state:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (token) {
+      fetchCurrentUser()
+    } else {
+      setCurrentUser(null)
+    }
+  }, [token, fetchCurrentUser])
 
   if (isLoading) {
     return null
