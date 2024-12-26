@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -27,6 +27,10 @@ export function EditDeviceDialog({
   onSave,
 }: EditDeviceDialogProps) {
   const [name, setName] = useState(deviceName || "")
+
+  useEffect(() => {
+    setName(deviceName || "")
+  }, [deviceName])
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
