@@ -32,6 +32,7 @@ const getEndOfDay = (date: Date) => {
 
 export function DeviceReadings({ device }: DeviceReadingsProps) {
   const { token, fetchWithToken } = useAuth()
+  const [isLoading, setIsLoading] = useState(false)
   const [date, setDate] = useState<DateRange | undefined>({
     from: addDays(new Date(), -1),
     to: new Date(),
@@ -192,16 +193,23 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
     return latestReadings[type]?.value
   }
 
-  const refreshData = useCallback(() => {
-    if (!token) return
-    if (date?.from && date?.to) {
-      fetchReadings()
-      fetchStatistics("temperature")
-      fetchStatistics("humidity")
-      fetchLatestReadings("temperature")
-      fetchLatestReadings("humidity")
+  const refreshData = useCallback(async () => {
+    if (!token || isLoading) return
+    setIsLoading(true)
+    try {
+      if (date?.from && date?.to) {
+        await fetchReadings()
+        await Promise.all([
+          fetchStatistics("temperature"),
+          fetchStatistics("humidity"),
+          fetchLatestReadings("temperature"),
+          fetchLatestReadings("humidity")
+        ])
+      }
+    } finally {
+      setIsLoading(false)
     }
-  }, [date, fetchReadings, fetchStatistics, fetchLatestReadings])
+  }, [date, fetchReadings, fetchStatistics, fetchLatestReadings, token, isLoading])
 
   useEffect(() => {
     if (!date?.from || !date?.to) return;
@@ -226,8 +234,18 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
   }, [date, fetchReadings, fetchStatistics, fetchLatestReadings]);
 
   useEffect(() => {
-    console.log('Component mounted, token status:', !!token);
-  }, [token])
+    if (!token) return
+
+    // Initial fetch
+    refreshData()
+
+    // Set up interval
+    const intervalId = setInterval(() => {
+      refreshData()
+    }, 60000) // 60000ms = 1 minute
+
+    return () => clearInterval(intervalId)
+  }, [token, refreshData])
 
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -280,8 +298,9 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
                 size="icon"
                 onClick={refreshData}
                 title="Refresh data"
+                disabled={isLoading}
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               </Button>
             </div>
             <DatePickerWithRange date={date} onDateChange={setDate} />
