@@ -16,6 +16,10 @@ on:
       - 'mqtt_ingestion_service/**'
       - '.github/workflows/docker-build.yml'
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   REGISTRY: ghcr.io
   OWNER: wipash

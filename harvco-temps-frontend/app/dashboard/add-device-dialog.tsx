@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+// import { useState } from "react"
+// import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -9,11 +9,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useToast } from "@/hooks/use-toast"
-import { DeviceCreate } from "@/types/device"
-import { getApiUrl } from "@/utils/api"
+// import { Input } from "@/components/ui/input"
+// import { Label } from "@/components/ui/label"
+// import { useToast } from "@/hooks/use-toast"
+// import { DeviceCreate } from "@/types/device"
+// import { getApiUrl } from "@/utils/api"
 
 interface AddDeviceDialogProps {
   open: boolean
@@ -22,56 +22,58 @@ interface AddDeviceDialogProps {
   onSuccess: () => void
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function AddDeviceDialog({ open, onOpenChange, token, onSuccess }: AddDeviceDialogProps) {
-  const [deviceId, setDeviceId] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+  // const [deviceId, setDeviceId] = useState("")
+  // const [isLoading, setIsLoading] = useState(false)
+  // const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault()
+  //   setIsLoading(true)
 
-    try {
-      const deviceData: DeviceCreate = {
-        device_id: deviceId,
-      }
+  //   try {
+  //     const deviceData: DeviceCreate = {
+  //       device_id: deviceId,
+  //     }
 
-      const res = await fetch(getApiUrl("/api/v1/devices"), {
-        method: "POST",
-        headers: {
-          Authorization: token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(deviceData),
-      })
+  //     const res = await fetch(getApiUrl("/api/v1/devices"), {
+  //       method: "POST",
+  //       headers: {
+  //         Authorization: token,
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify(deviceData),
+  //     })
 
-      if (!res.ok) throw new Error("Failed to add device")
+  //     if (!res.ok) throw new Error("Failed to add device")
 
-      toast({
-        title: "Success",
-        description: "Device added successfully",
-      })
-      onSuccess()
-      setDeviceId("")
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to add device",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  //     toast({
+  //       title: "Success",
+  //       description: "Device added successfully",
+  //     })
+  //     onSuccess()
+  //     setDeviceId("")
+  //   } catch {
+  //     toast({
+  //       title: "Error",
+  //       description: "Failed to add device",
+  //       variant: "destructive",
+  //     })
+  //   } finally {
+  //     setIsLoading(false)
+  //   }
+  // }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add New Device</DialogTitle>
-          <DialogDescription>Enter the 6-character device ID to add it to your account.</DialogDescription>
+          <DialogTitle>Add New Device... but</DialogTitle>
+          {/* <DialogDescription>Enter the 6-character device ID to add it to your account.</DialogDescription> */}
+          <DialogDescription>Literally no other devices exist, what are you doing clicking this?</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="deviceId">Device ID</Label>
             <Input
@@ -87,7 +89,7 @@ export function AddDeviceDialog({ open, onOpenChange, token, onSuccess }: AddDev
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Adding..." : "Add Device"}
           </Button>
-        </form>
+        </form> */}
       </DialogContent>
     </Dialog>
   )
