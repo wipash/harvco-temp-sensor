@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token, fetchWithToken])
 
-  const fetchWithToken = async (
+  const fetchWithToken = useCallback(async (
     url: string,
     options: RequestInit = {}
   ): Promise<Response> => {
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("API request failed:", error)
       throw error
     }
-  }
+  }, [token, refreshToken])
 
   if (isLoading) {
     return null
