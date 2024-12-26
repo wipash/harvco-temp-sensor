@@ -85,7 +85,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
         })
       }
     }
-  }, [device.id, date, token, toast])
+  }, [device.id, date, token, toast, fetchWithToken])
 
   const fetchStatistics = useCallback(async (readingType: ReadingType, signal?: AbortSignal) => {
     if (!token) return
@@ -126,7 +126,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
         })
       }
     }
-  }, [device.id, date, token, toast])
+  }, [device.id, date, token, toast, fetchWithToken])
 
   const formatReadings = (type: ReadingType) => {
     return readings
@@ -187,7 +187,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
         })
       }
     }
-  }, [device.id, token, toast])
+  }, [device.id, token, toast, fetchWithToken])
 
   const getCurrentReading = (type: ReadingType) => {
     return latestReadings[type]?.value
@@ -209,7 +209,7 @@ export function DeviceReadings({ device }: DeviceReadingsProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [date, fetchReadings, fetchStatistics, fetchLatestReadings, token, isLoading])
+  }, [date, fetchReadings, fetchStatistics, fetchLatestReadings, token, isLoading, fetchWithToken])
 
   useEffect(() => {
     if (!date?.from || !date?.to) return;
