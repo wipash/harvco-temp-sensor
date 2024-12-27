@@ -15,6 +15,8 @@ from fastapi import HTTPException
 from app.models.reading import Reading, ReadingType
 from app.schemas.reading import ReadingCreate, ReadingUpdate
 from app.crud.base import CRUDBase
+from app.crud.crud_device import device as crud_device
+from app.models.device import Device
 
 
 class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
@@ -22,6 +24,26 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
     CRUD operations for Reading model.
     Inherits basic CRUD operations from CRUDBase.
     """
+
+    async def _apply_device_offset(
+        self, 
+        db: AsyncSession, 
+        reading: Reading, 
+        device: Optional[Device] = None
+    ) -> Reading:
+        """Apply device offset to a reading."""
+        if device is None:
+            device = await crud_device.get(db, id=reading.device_id)
+        
+        if device:
+            if reading.reading_type == ReadingType.TEMPERATURE:
+                offset = device.temperature_offset or 0.0
+                reading.value += offset
+            elif reading.reading_type == ReadingType.HUMIDITY:
+                offset = device.humidity_offset or 0.0
+                reading.value += offset
+        
+        return reading
 
     def _valid_value_filters(self):
         """Return SQLAlchemy filters for valid numeric values."""
@@ -105,6 +127,12 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         result = await db.execute(query)
         readings = list(result.scalars().all())
 
+        # Apply offsets to all readings
+        if readings:
+            device = await crud_device.get(db, id=device_id)
+            for reading in readings:
+                await self._apply_device_offset(db, reading, device)
+
         logger = logging.getLogger(__name__)
         logger.info(
             f"Query executed for device_id={device_id}, reading_type={reading_type}"
@@ -182,7 +210,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         reading_type: Optional[ReadingType] = None,
     ) -> Optional[Reading]:
         """
-        Get the latest reading for a device.
+        Get the latest reading for a device with offset applied.
 
         Args:
             db: Database session
@@ -201,7 +229,12 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
 
         query = query.order_by(Reading.timestamp.desc()).limit(1)
         result = await db.execute(query)
-        return result.scalar_one_or_none()
+        reading = result.scalar_one_or_none()
+        
+        if reading:
+            reading = await self._apply_device_offset(db, reading)
+        
+        return reading
 
     async def get_statistics(
         self,
@@ -279,6 +312,15 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             "avg": avg_val if avg_val is not None else 0.0,
             "count": int(stats.count),
         }
+
+        # Apply offset to statistics
+        device = await crud_device.get(db, id=device_id)
+        if device:
+            offset = (device.temperature_offset if reading_type == ReadingType.TEMPERATURE 
+                     else device.humidity_offset) or 0.0
+            result["min"] += offset
+            result["max"] += offset
+            result["avg"] += offset
 
         logger.debug(f"Final result: {result}")
         return result
