@@ -1,6 +1,6 @@
 from aiomqtt import Client as MQTTClient
 from config import Settings
-from message_processor import MessageProcessor
+from backend.ingestion_service.message_processor import MessageProcessor
 import logging
 import asyncio
 import re
