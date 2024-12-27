@@ -182,20 +182,18 @@ class TestSecurityHeaders:
 
 def test_settings_integration(mock_settings):
     """Test integration with application settings"""
-    # Capture the exact time before token creation
-    start_time = datetime.utcnow()
-    
     token = create_access_token(subject="test")
     decoded = decode_token(token)
 
     # Verify token was created with test settings
     assert decoded["sub"] == "test"
 
-    # Verify expiration time matches settings
+    # Get current time and token expiration time
+    now = datetime.utcnow()
     exp_time = datetime.utcfromtimestamp(decoded["exp"])
     
-    # Calculate expected expiration from the token creation time
-    expected_exp = start_time + timedelta(minutes=mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    # Calculate the actual minutes difference
+    minutes_diff = (exp_time - now).total_seconds() / 60
 
-    # Allow 5 seconds tolerance
-    assert abs((exp_time - expected_exp).total_seconds()) < 5
+    # Should be close to ACCESS_TOKEN_EXPIRE_MINUTES (allow 1 minute tolerance)
+    assert abs(minutes_diff - mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES) < 1

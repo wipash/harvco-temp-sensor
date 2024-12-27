@@ -12,7 +12,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # JWT configuration
 ALGORITHM = "HS256"
 REFRESH_TOKEN_EXPIRE_DAYS = 30
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 def create_password_hash(password: str) -> str:
     """
