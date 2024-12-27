@@ -5,8 +5,8 @@ class DeviceBase(BaseModel):
     device_id: str
     name: Optional[str] = None
     is_active: Optional[bool] = True
-    temperature_offset: Optional[float] = Field(0.0, ge=-10.0, le=10.0)  # Between -10 and +10
-    humidity_offset: Optional[float] = Field(0.0, ge=-20.0, le=20.0)     # Between -20 and +20
+    temperature_offset: Optional[float] = Field(None, ge=-10.0, le=10.0)  # Between -10 and +10
+    humidity_offset: Optional[float] = Field(None, ge=-20.0, le=20.0)     # Between -20 and +20
 
     @validator('temperature_offset')
     def validate_temperature_offset(cls, v):
