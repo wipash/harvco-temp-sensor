@@ -9,6 +9,35 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.device import Device
+from app.models.reading import Reading
+
+async def apply_device_offsets(db: AsyncSession, readings: List[Reading]) -> List[Reading]:
+    """Apply device offsets to readings."""
+    # Group readings by device to minimize database queries
+    readings_by_device = {}
+    for reading in readings:
+        if reading.device_id not in readings_by_device:
+            readings_by_device[reading.device_id] = []
+        readings_by_device[reading.device_id].append(reading)
+    
+    # Get all needed devices in one query
+    device_ids = list(readings_by_device.keys())
+    devices = await db.execute(select(Device).where(Device.id.in_(device_ids)))
+    devices = {d.id: d for d in devices.scalars().all()}
+    
+    # Apply offsets
+    for device_id, device_readings in readings_by_device.items():
+        device = devices.get(device_id)
+        if device:
+            for reading in device_readings:
+                if reading.reading_type == ReadingType.TEMPERATURE:
+                    reading.value += device.temperature_offset
+                elif reading.reading_type == ReadingType.HUMIDITY:
+                    reading.value += device.humidity_offset
+    
+    # Apply device offsets before returning
+    readings = await apply_device_offsets(db, readings)
+    return readings
 
 from app.api.deps import (
     get_db,
@@ -106,6 +135,14 @@ async def get_reading_statistics(
             detail="Not enough permissions to access this device"
         )
 
+    # Get the device to access its offset
+    device = await crud_device.get(db, id=device_id)
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+
     stats = await crud_reading.get_statistics(
         db,
         device_id=device_id,
@@ -113,6 +150,15 @@ async def get_reading_statistics(
         start_date=date_range.start_date,
         end_date=date_range.end_date
     )
+
+    # Apply the appropriate offset to all statistics
+    offset = (device.temperature_offset if reading_type == ReadingType.TEMPERATURE 
+             else device.humidity_offset)
+    
+    stats["min"] += offset
+    stats["max"] += offset
+    stats["avg"] += offset
+    
     return stats
 
 @router.get("/latest", response_model=ReadingOut)
@@ -154,6 +200,14 @@ async def get_latest_reading(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No readings found for this device"
         )
+
+    # Apply the device offset
+    device = await crud_device.get(db, id=device_id)
+    if device:
+        if reading.reading_type == ReadingType.TEMPERATURE:
+            reading.value += device.temperature_offset
+        elif reading.reading_type == ReadingType.HUMIDITY:
+            reading.value += device.humidity_offset
 
     return reading
 
