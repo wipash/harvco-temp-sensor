@@ -354,7 +354,7 @@ class TestDeviceCRUD:
         assert device.temperature_offset == 5.0
         assert device.humidity_offset == 10.0
 
-        # Test with null offsets (should be allowed)
+        # Test with null offsets (should default to 0.0)
         null_offset_device = DeviceCreate(
             device_id="null-offset-device",
             name="Null Offset Device",
@@ -363,8 +363,8 @@ class TestDeviceCRUD:
         )
         device = await crud_device.create(db_session, obj_in=null_offset_device)
 
-        assert device.temperature_offset is None
-        assert device.humidity_offset is None
+        assert device.temperature_offset == 0.0  # Null offset should default to 0.0
+        assert device.humidity_offset == 0.0     # Null offset should default to 0.0
 
     async def test_offset_application_to_readings(self, db_session: AsyncSession):
         """Test how offsets are applied to readings."""
