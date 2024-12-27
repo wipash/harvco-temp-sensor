@@ -330,8 +330,8 @@ class TestDeviceCRUD:
         device_in = DeviceCreate(
             device_id="extreme-offset-device",
             name="Extreme Offset Device",
-            temperature_offset=100.0,  # Unreasonable value
-            humidity_offset=50.0,  # Unreasonable value
+            temperature_offset=15.0,  # Outside allowed range of ±10
+            humidity_offset=25.0,  # Outside allowed range of ±20
         )
 
         # This should raise a validation error
