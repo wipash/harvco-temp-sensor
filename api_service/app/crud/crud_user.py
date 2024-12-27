@@ -6,7 +6,7 @@ the repository pattern.
 """
 
 from typing import Optional, List, Any, Dict
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,6 +14,7 @@ from app.core.security import create_password_hash, verify_password
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.crud.base import CRUDBase
+
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     """
@@ -34,12 +35,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         """
         return await super().get(db, id=id)
 
-    async def get_by_email(
-        self,
-        db: AsyncSession,
-        *,
-        email: str
-    ) -> Optional[User]:
+    async def get_by_email(self, db: AsyncSession, *, email: str) -> Optional[User]:
         """
         Get a user by email.
 
@@ -54,12 +50,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
-    async def create(
-        self,
-        db: AsyncSession,
-        *,
-        obj_in: UserCreate
-    ) -> User:
+    async def create(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
         """
         Create a new user.
 
@@ -74,7 +65,9 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             email=obj_in.email,
             hashed_password=create_password_hash(obj_in.password),
             is_active=obj_in.is_active,
-            is_superuser=obj_in.is_superuser if hasattr(obj_in, 'is_superuser') else False
+            is_superuser=obj_in.is_superuser
+            if hasattr(obj_in, "is_superuser")
+            else False,
         )
         db.add(db_obj)
         await db.commit()
@@ -82,11 +75,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return db_obj
 
     async def update(
-        self,
-        db: AsyncSession,
-        *,
-        db_obj: User,
-        obj_in: UserUpdate | Dict[str, Any]
+        self, db: AsyncSession, *, db_obj: User, obj_in: UserUpdate | Dict[str, Any]
     ) -> User:
         """
         Update a user.
@@ -112,11 +101,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return await super().update(db, db_obj=db_obj, obj_in=update_data)
 
     async def authenticate(
-        self,
-        db: AsyncSession,
-        *,
-        email: str,
-        password: str
+        self, db: AsyncSession, *, email: str, password: str
     ) -> Optional[User]:
         """
         Authenticate a user.
@@ -144,7 +129,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         *,
         skip: int = 0,
         limit: int = 100,
-        active_only: bool = True
+        active_only: bool = True,
     ) -> List[User]:
         """
         Get multiple users with their devices preloaded.
@@ -161,16 +146,13 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         query = select(User).options(selectinload(User.devices))
 
         if active_only:
-            query = query.where(User.is_active == True)
+            query = query.where(User.is_active is True)
 
         query = query.offset(skip).limit(limit)
         result = await db.execute(query)
         return list(result.scalars().all())
 
-    async def is_active(
-        self,
-        user: User
-    ) -> bool:
+    async def is_active(self, user: User) -> bool:
         """
         Check if user is active.
 
@@ -182,10 +164,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         """
         return user.is_active
 
-    async def is_superuser(
-        self,
-        user: User
-    ) -> bool:
+    async def is_superuser(self, user: User) -> bool:
         """
         Check if user is superuser.
 
@@ -195,7 +174,9 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         Returns:
             bool: True if user is superuser
         """
-        return bool(user.is_superuser)  # Explicitly convert to bool and return the actual value
+        return bool(
+            user.is_superuser
+        )  # Explicitly convert to bool and return the actual value
 
     async def get_devices(
         self,
@@ -204,7 +185,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         user_id: int,
         active_only: bool = True,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[Any]:
         """
         Get all devices belonging to a user.
@@ -222,38 +203,36 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         from app.models.device import Device
         from sqlalchemy import or_, select
         import logging
+
         logger = logging.getLogger(__name__)
-        
-        logger.debug(f"Getting devices for user_id={user_id}, active_only={active_only}, skip={skip}, limit={limit}")
-        
+
+        logger.debug(
+            f"Getting devices for user_id={user_id}, active_only={active_only}, skip={skip}, limit={limit}"
+        )
+
         # Get devices with pagination
         query = select(Device).where(Device.owner_id == user_id)
-        
+
         if active_only:
             # Include devices where is_active is True OR None
-            query = query.where(or_(Device.is_active == True, Device.is_active == None))
-        
+            query = query.where(or_(Device.is_active is True, Device.is_active is None))
+
         query = query.offset(skip).limit(limit)
         logger.debug(f"Query: {query}")
-        
+
         result = await db.execute(query)
         devices = list(result.scalars().all())
         logger.debug(f"Found {len(devices)} devices")
-        
-        # Ensure is_active is a boolean for each device
+
+        # Ensure is_active is a boolean for each devices
         for device in devices:
             if device.is_active is None:
                 device.is_active = True  # Set default value
                 await db.commit()  # Save the change to database
-        
+
         return devices
 
-    async def deactivate(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: int
-    ) -> Optional[User]:
+    async def deactivate(self, db: AsyncSession, *, user_id: int) -> Optional[User]:
         """
         Deactivate a user.
 
@@ -272,6 +251,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         await db.commit()
         await db.refresh(user)
         return user
+
 
 # Create singleton instance for use across the application
 user = CRUDUser(User)

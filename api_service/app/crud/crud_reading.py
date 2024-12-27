@@ -26,15 +26,12 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
     """
 
     async def _apply_device_offset(
-        self, 
-        db: AsyncSession, 
-        reading: Reading, 
-        device: Optional[Device] = None
+        self, db: AsyncSession, reading: Reading, device: Optional[Device] = None
     ) -> Reading:
         """Apply device offset to a reading."""
         if device is None:
             device = await crud_device.get(db, id=reading.device_id)
-        
+
         if device:
             if reading.reading_type == ReadingType.TEMPERATURE:
                 offset = device.temperature_offset or 0.0
@@ -42,7 +39,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             elif reading.reading_type == ReadingType.HUMIDITY:
                 offset = device.humidity_offset or 0.0
                 reading.value += offset
-        
+
         return reading
 
     def _valid_value_filters(self):
@@ -230,10 +227,10 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         query = query.order_by(Reading.timestamp.desc()).limit(1)
         result = await db.execute(query)
         reading = result.scalar_one_or_none()
-        
+
         if reading:
             reading = await self._apply_device_offset(db, reading)
-        
+
         return reading
 
     async def get_statistics(
@@ -316,8 +313,11 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         # Apply offset to statistics
         device = await crud_device.get(db, id=device_id)
         if device:
-            offset = (device.temperature_offset if reading_type == ReadingType.TEMPERATURE 
-                     else device.humidity_offset) or 0.0
+            offset = (
+                device.temperature_offset
+                if reading_type == ReadingType.TEMPERATURE
+                else device.humidity_offset
+            ) or 0.0
             result["min"] += offset
             result["max"] += offset
             result["avg"] += offset

@@ -7,14 +7,12 @@ from app.crud.base import CRUDBase
 from app.models.token import RefreshToken
 from app.schemas.token import RefreshTokenCreate, RefreshTokenDB
 
+
 class CRUDRefreshToken(CRUDBase[RefreshToken, RefreshTokenCreate, RefreshTokenDB]):
     """CRUD operations for refresh tokens."""
-    
+
     async def get_by_token_id(
-        self, 
-        db: AsyncSession, 
-        *, 
-        token_id: str
+        self, db: AsyncSession, *, token_id: str
     ) -> Optional[RefreshToken]:
         """
         Get refresh token by its unique token_id.
@@ -31,10 +29,7 @@ class CRUDRefreshToken(CRUDBase[RefreshToken, RefreshTokenCreate, RefreshTokenDB
         return result.scalar_one_or_none()
 
     async def get_active_by_user_id(
-        self, 
-        db: AsyncSession, 
-        *, 
-        user_id: int
+        self, db: AsyncSession, *, user_id: int
     ) -> list[RefreshToken]:
         """
         Get all active refresh tokens for a user.
@@ -47,18 +42,12 @@ class CRUDRefreshToken(CRUDBase[RefreshToken, RefreshTokenCreate, RefreshTokenDB
             List of active RefreshToken objects
         """
         query = select(RefreshToken).where(
-            RefreshToken.user_id == user_id,
-            RefreshToken.expires_at > datetime.utcnow()
+            RefreshToken.user_id == user_id, RefreshToken.expires_at > datetime.utcnow()
         )
         result = await db.execute(query)
         return result.scalars().all()
 
-    async def invalidate_token(
-        self, 
-        db: AsyncSession, 
-        *, 
-        token_id: str
-    ) -> bool:
+    async def invalidate_token(self, db: AsyncSession, *, token_id: str) -> bool:
         """
         Invalidate a refresh token by deleting it.
 
@@ -76,10 +65,7 @@ class CRUDRefreshToken(CRUDBase[RefreshToken, RefreshTokenCreate, RefreshTokenDB
             return True
         return False
 
-    async def cleanup_expired(
-        self, 
-        db: AsyncSession
-    ) -> int:
+    async def cleanup_expired(self, db: AsyncSession) -> int:
         """
         Remove all expired refresh tokens from database.
 
@@ -89,18 +75,17 @@ class CRUDRefreshToken(CRUDBase[RefreshToken, RefreshTokenCreate, RefreshTokenDB
         Returns:
             Number of tokens deleted
         """
-        query = select(RefreshToken).where(
-            RefreshToken.expires_at <= datetime.utcnow()
-        )
+        query = select(RefreshToken).where(RefreshToken.expires_at <= datetime.utcnow())
         result = await db.execute(query)
         expired_tokens = result.scalars().all()
-        
+
         count = len(expired_tokens)
         for token in expired_tokens:
             await db.delete(token)
-        
+
         await db.commit()
         return count
+
 
 # Create CRUD instance
 crud_refresh_token = CRUDRefreshToken(RefreshToken)

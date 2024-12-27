@@ -5,16 +5,17 @@ This module implements Create, Read, Update, Delete operations for devices using
 the repository pattern.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.device import Device
-from app.models.reading import Reading, ReadingType
+from app.models.reading import Reading
 from app.schemas.device import DeviceCreate, DeviceUpdate
 from app.crud.base import CRUDBase
+
 
 class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
     """
@@ -23,11 +24,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
     """
 
     async def create_with_owner(
-        self,
-        db: AsyncSession,
-        *,
-        obj_in: DeviceCreate,
-        owner_id: int
+        self, db: AsyncSession, *, obj_in: DeviceCreate, owner_id: int
     ) -> Device:
         """
         Create a new device with an owner.
@@ -40,20 +37,14 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         Returns:
             Device: Created device
         """
-        db_obj = Device(
-            **obj_in.model_dump(exclude={'id'}),
-            owner_id=owner_id
-        )
+        db_obj = Device(**obj_in.model_dump(exclude={"id"}), owner_id=owner_id)
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
         return db_obj
 
     async def get_by_device_id(
-        self,
-        db: AsyncSession,
-        *,
-        device_id: str
+        self, db: AsyncSession, *, device_id: str
     ) -> Optional[Device]:
         """
         Get a device by its device_id.
@@ -77,7 +68,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         skip: int = 0,
         limit: int = 100,
         active_only: bool = True,
-        with_latest_reading: bool = False
+        with_latest_reading: bool = False,
     ) -> List[Device]:
         """
         Get multiple devices belonging to an owner with filters.
@@ -94,31 +85,30 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
             List[Device]: List of devices
         """
         query = select(Device).where(Device.owner_id == owner_id)
-        
+
         if active_only:
-            query = query.where(Device.is_active == True)
-            
+            query = query.where(Device.is_active is True)
+
         if with_latest_reading:
             from app.models.reading import Reading
+
             query = query.options(
                 selectinload(
                     Device.readings.and_(
-                        Reading.timestamp == select(func.max(Reading.timestamp))
+                        Reading.timestamp
+                        == select(func.max(Reading.timestamp))
                         .where(Reading.device_id == Device.id)
                         .scalar_subquery()
                     )
                 )
             )
-            
+
         query = query.offset(skip).limit(limit)
         result = await db.execute(query)
         return list(result.scalars().all())
 
     async def get_with_latest_reading(
-        self,
-        db: AsyncSession,
-        *,
-        id: int
+        self, db: AsyncSession, *, id: int
     ) -> Optional[Device]:
         """
         Get a device with its readings preloaded.
@@ -131,20 +121,12 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
             Optional[Device]: Device with readings or None
         """
         query = (
-            select(Device)
-            .options(selectinload(Device.readings))
-            .where(Device.id == id)
+            select(Device).options(selectinload(Device.readings)).where(Device.id == id)
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
-    async def is_owner(
-        self,
-        db: AsyncSession,
-        *,
-        device_id: int,
-        user_id: int
-    ) -> bool:
+    async def is_owner(self, db: AsyncSession, *, device_id: int, user_id: int) -> bool:
         """
         Check if a user is the owner of a device.
 
@@ -162,11 +144,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         return device.owner_id == user_id
 
     async def get_active_devices(
-        self,
-        db: AsyncSession,
-        *,
-        skip: int = 0,
-        limit: int = 100
+        self, db: AsyncSession, *, skip: int = 0, limit: int = 100
     ) -> List[Device]:
         """
         Get all active devices.
@@ -179,21 +157,11 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         Returns:
             List[Device]: List of active devices
         """
-        query = (
-            select(Device)
-            .where(Device.is_active == True)
-            .offset(skip)
-            .limit(limit)
-        )
+        query = select(Device).where(Device.is_active is True).offset(skip).limit(limit)
         result = await db.execute(query)
         return list(result.scalars().all())
 
-    async def deactivate(
-        self,
-        db: AsyncSession,
-        *,
-        id: int
-    ) -> Optional[Device]:
+    async def deactivate(self, db: AsyncSession, *, id: int) -> Optional[Device]:
         """
         Deactivate a device.
 
@@ -213,14 +181,8 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         await db.refresh(device)
         return device
 
-
-
     async def bulk_update_status(
-        self,
-        db: AsyncSession,
-        *,
-        device_ids: List[int],
-        is_active: bool
+        self, db: AsyncSession, *, device_ids: List[int], is_active: bool
     ) -> List[Device]:
         """
         Bulk update the active status of multiple devices.
@@ -233,10 +195,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         Returns:
             List[Device]: List of updated devices
         """
-        query = (
-            select(Device)
-            .where(Device.id.in_(device_ids))
-        )
+        query = select(Device).where(Device.id.in_(device_ids))
         result = await db.execute(query)
         devices = list(result.scalars().all())
 
@@ -250,10 +209,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         return devices
 
     async def get_inactive_devices(
-        self,
-        db: AsyncSession,
-        *,
-        min_inactive_days: int = 30
+        self, db: AsyncSession, *, min_inactive_days: int = 30
     ) -> List[Device]:
         """
         Get devices that haven't sent readings for a specified period.
@@ -266,7 +222,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
             List[Device]: List of inactive devices
         """
         cutoff_date = datetime.utcnow() - timedelta(days=min_inactive_days)
-        
+
         subquery = (
             select(Reading.device_id)
             .where(Reading.timestamp >= cutoff_date)
@@ -274,18 +230,13 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
             .scalar_subquery()
         )
 
-        query = (
-            select(Device)
-            .where(
-                and_(
-                    Device.is_active == True,
-                    Device.id.notin_(subquery)
-                )
-            )
+        query = select(Device).where(
+            and_(Device.is_active is True, Device.id.notin_(subquery))
         )
 
         result = await db.execute(query)
         return list(result.scalars().all())
+
 
 # Create singleton instance for use across the application
 device = CRUDDevice(Device)
