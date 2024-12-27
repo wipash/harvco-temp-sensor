@@ -34,10 +34,10 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
 
         if device:
             if reading.reading_type == ReadingType.TEMPERATURE:
-                offset = device.temperature_offset or 0.0
+                offset = device.temperature_offset or 0.0  # Convert None to 0.0
                 reading.value += offset
             elif reading.reading_type == ReadingType.HUMIDITY:
-                offset = device.humidity_offset or 0.0
+                offset = device.humidity_offset or 0.0  # Convert None to 0.0
                 reading.value += offset
 
         return reading
