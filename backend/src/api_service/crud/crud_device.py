@@ -8,6 +8,7 @@ the repository pattern.
 from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlalchemy import select, func, and_
+from models.reading import ReadingType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -236,6 +237,70 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
 
         result = await db.execute(query)
         return list(result.scalars().all())
+
+    async def get_reading_statistics(
+        self,
+        db: AsyncSession,
+        *,
+        device_id: int,
+        reading_type: ReadingType,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+    ) -> Optional[dict]:
+        """
+        Get statistics for device readings with offsets applied.
+
+        Args:
+            db: Database session
+            device_id: Device ID
+            reading_type: Type of reading (temperature/humidity)
+            start_time: Start time for statistics calculation
+            end_time: End time for statistics calculation
+
+        Returns:
+            Optional[dict]: Dictionary containing min, max, and average values with offsets applied
+        """
+        # Get the device to access its offsets
+        device = await self.get(db, id=device_id)
+        if not device:
+            return None
+
+        # Build query with time filters
+        query = (
+            select(
+                func.min(Reading.value).label("min_value"),
+                func.max(Reading.value).label("max_value"),
+                func.avg(Reading.value).label("avg_value"),
+            )
+            .where(
+                and_(
+                    Reading.device_id == device_id,
+                    Reading.reading_type == reading_type,
+                )
+            )
+        )
+
+        if start_time:
+            query = query.where(Reading.timestamp >= start_time)
+        if end_time:
+            query = query.where(Reading.timestamp <= end_time)
+
+        result = await db.execute(query)
+        stats = result.one()
+
+        # Apply offset to statistics
+        offset = (
+            device.temperature_offset
+            if reading_type == ReadingType.TEMPERATURE
+            else device.humidity_offset
+        )
+        offset = offset or 0.0
+
+        return type("Statistics", (), {
+            "min_value": stats.min_value + offset if stats.min_value is not None else None,
+            "max_value": stats.max_value + offset if stats.max_value is not None else None,
+            "avg_value": stats.avg_value + offset if stats.avg_value is not None else None,
+        })
 
 
 # Create singleton instance for use across the application
