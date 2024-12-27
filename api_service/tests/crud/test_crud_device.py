@@ -416,3 +416,202 @@ class TestDeviceCRUD:
         # Verify ownership
         assert await crud_device.is_owner(db_session, device_id=device.id, user_id=user1.id)
         assert not await crud_device.is_owner(db_session, device_id=device.id, user_id=user2.id)
+
+    async def test_device_offsets(self, db_session: AsyncSession):
+        """Test device temperature and humidity offset functionality."""
+        # Create a device with offsets
+        device_in = DeviceCreate(
+            device_id="offset-test-device",
+            name="Offset Test Device",
+            temperature_offset=1.5,
+            humidity_offset=-2.0
+        )
+        device = await crud_device.create(db_session, obj_in=device_in)
+        
+        assert device.temperature_offset == 1.5
+        assert device.humidity_offset == -2.0
+
+        # Test updating offsets
+        update_data = DeviceUpdate(
+            temperature_offset=2.0,
+            humidity_offset=-1.0
+        )
+        updated_device = await crud_device.update(
+            db_session,
+            db_obj=device,
+            obj_in=update_data
+        )
+        
+        assert updated_device.temperature_offset == 2.0
+        assert updated_device.humidity_offset == -1.0
+
+        # Test partial offset updates
+        partial_update = DeviceUpdate(temperature_offset=0.5)
+        partially_updated = await crud_device.update(
+            db_session,
+            db_obj=updated_device,
+            obj_in=partial_update
+        )
+        
+        assert partially_updated.temperature_offset == 0.5
+        assert partially_updated.humidity_offset == -1.0  # Should remain unchanged
+
+    async def test_device_offset_validation(self, db_session: AsyncSession):
+        """Test validation of device offset values."""
+        # Test creating device with extreme offsets
+        device_in = DeviceCreate(
+            device_id="extreme-offset-device",
+            name="Extreme Offset Device",
+            temperature_offset=100.0,  # Unreasonable value
+            humidity_offset=50.0       # Unreasonable value
+        )
+        
+        # This should raise a validation error
+        with pytest.raises(ValueError):
+            await crud_device.create(db_session, obj_in=device_in)
+
+        # Test with null offsets (should be allowed)
+        null_offset_device = DeviceCreate(
+            device_id="null-offset-device",
+            name="Null Offset Device",
+            temperature_offset=None,
+            humidity_offset=None
+        )
+        device = await crud_device.create(db_session, obj_in=null_offset_device)
+        
+        assert device.temperature_offset is None
+        assert device.humidity_offset is None
+
+    async def test_offset_application_to_readings(self, db_session: AsyncSession):
+        """Test how offsets are applied to readings."""
+        # Create device with known offsets
+        device_in = DeviceCreate(
+            device_id="reading-offset-device",
+            name="Reading Offset Device",
+            temperature_offset=1.0,
+            humidity_offset=2.0
+        )
+        device = await crud_device.create(db_session, obj_in=device_in)
+        
+        # Create readings
+        readings = [
+            Reading(
+                device_id=device.id,
+                reading_type=ReadingType.TEMPERATURE,
+                value=20.0,
+                timestamp=datetime.utcnow()
+            ),
+            Reading(
+                device_id=device.id,
+                reading_type=ReadingType.HUMIDITY,
+                value=50.0,
+                timestamp=datetime.utcnow()
+            )
+        ]
+        
+        db_session.add_all(readings)
+        await db_session.commit()
+
+        # Get readings with offsets applied
+        device_with_readings = await crud_device.get_with_latest_reading(
+            db_session,
+            id=device.id
+        )
+        
+        # Test temperature reading with offset
+        temp_reading = next(
+            r for r in device_with_readings.readings 
+            if r.reading_type == ReadingType.TEMPERATURE
+        )
+        assert temp_reading.get_adjusted_value() == 21.0  # 20.0 + 1.0
+        
+        # Test humidity reading with offset
+        humidity_reading = next(
+            r for r in device_with_readings.readings 
+            if r.reading_type == ReadingType.HUMIDITY
+        )
+        assert humidity_reading.get_adjusted_value() == 52.0  # 50.0 + 2.0
+
+    async def test_offset_statistics(self, db_session: AsyncSession):
+        """Test offset application in statistical calculations."""
+        # Create device with offsets
+        device_in = DeviceCreate(
+            device_id="stats-offset-device",
+            name="Stats Offset Device",
+            temperature_offset=1.0,
+            humidity_offset=-1.0
+        )
+        device = await crud_device.create(db_session, obj_in=device_in)
+        
+        # Create multiple readings over time
+        readings = [
+            Reading(
+                device_id=device.id,
+                reading_type=ReadingType.TEMPERATURE,
+                value=value,
+                timestamp=datetime.utcnow() - timedelta(hours=i)
+            )
+            for i, value in enumerate([20.0, 22.0, 21.0])
+        ]
+        
+        db_session.add_all(readings)
+        await db_session.commit()
+
+        # Get statistics with offsets applied
+        start_time = datetime.utcnow() - timedelta(days=1)
+        end_time = datetime.utcnow()
+        
+        stats = await crud_device.get_reading_statistics(
+            db_session,
+            device_id=device.id,
+            reading_type=ReadingType.TEMPERATURE,
+            start_time=start_time,
+            end_time=end_time
+        )
+        
+        # Verify statistics with offset
+        assert stats.min_value == 21.0  # 20.0 + 1.0
+        assert stats.max_value == 23.0  # 22.0 + 1.0
+        assert stats.avg_value == 22.0  # 21.0 + 1.0
+
+    async def test_offset_edge_cases(self, db_session: AsyncSession):
+        """Test edge cases for offset handling."""
+        # Test with zero offsets
+        device_in = DeviceCreate(
+            device_id="zero-offset-device",
+            name="Zero Offset Device",
+            temperature_offset=0.0,
+            humidity_offset=0.0
+        )
+        device = await crud_device.create(db_session, obj_in=device_in)
+        
+        # Create reading
+        reading = Reading(
+            device_id=device.id,
+            reading_type=ReadingType.TEMPERATURE,
+            value=20.0,
+            timestamp=datetime.utcnow()
+        )
+        db_session.add(reading)
+        await db_session.commit()
+        
+        # Verify zero offset doesn't affect value
+        device_with_reading = await crud_device.get_with_latest_reading(
+            db_session,
+            id=device.id
+        )
+        assert device_with_reading.readings[0].get_adjusted_value() == 20.0
+
+        # Test with very small offsets
+        update_data = DeviceUpdate(
+            temperature_offset=0.0001,
+            humidity_offset=-0.0001
+        )
+        updated_device = await crud_device.update(
+            db_session,
+            db_obj=device,
+            obj_in=update_data
+        )
+        
+        assert abs(updated_device.temperature_offset - 0.0001) < 1e-6
+        assert abs(updated_device.humidity_offset - (-0.0001)) < 1e-6
