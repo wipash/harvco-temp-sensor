@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.reading import Reading, ReadingType
 from src.models.device import Device
 from src.schemas.device import DeviceCreate
+from pydantic import ValidationError
 from src.api_service.crud.crud_device import device as crud_device
 from src.api_service.crud.crud_reading import reading as crud_reading
 
@@ -268,3 +269,50 @@ class TestReadingOffsets:
 
         # Should return raw value without offset since device doesn't exist
         assert result.value == 20.0
+
+    async def test_invalid_offsets(self, db_session: AsyncSession, test_user):
+        """Test that invalid offsets are properly rejected."""
+        # Test humidity offset above maximum
+        with pytest.raises(ValidationError) as exc_info:
+            await create_test_device_with_offsets(
+                db_session,
+                "invalid-humid-device",
+                temp_offset=0.0,
+                humid_offset=999.9,  # Way above maximum
+                owner_id=test_user.id
+            )
+        assert "humidity_offset" in str(exc_info.value)
+        assert "less_than_equal" in str(exc_info.value)
+
+        # Test humidity offset below minimum (if there is one)
+        with pytest.raises(ValidationError) as exc_info:
+            await create_test_device_with_offsets(
+                db_session,
+                "negative-humid-device",
+                temp_offset=0.0,
+                humid_offset=-21.0,  # Assuming there's a minimum bound
+                owner_id=test_user.id
+            )
+        assert "humidity_offset" in str(exc_info.value)
+
+        # Test temperature offset extremes (if there are bounds)
+        with pytest.raises(ValidationError) as exc_info:
+            await create_test_device_with_offsets(
+                db_session,
+                "invalid-temp-device",
+                temp_offset=100.0,  # Assuming there's a maximum bound
+                humid_offset=0.0,
+                owner_id=test_user.id
+            )
+        assert "temperature_offset" in str(exc_info.value)
+
+        # Test that valid offsets at the boundaries are accepted
+        device = await create_test_device_with_offsets(
+            db_session,
+            "boundary-device",
+            temp_offset=10.0,  # Assuming this is at or near the boundary
+            humid_offset=20.0,  # Maximum allowed
+            owner_id=test_user.id
+        )
+        assert device.humidity_offset == 20.0
+        assert device.temperature_offset == 10.0
