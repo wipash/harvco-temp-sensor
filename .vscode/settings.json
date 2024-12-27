@@ -1,6 +1,6 @@
 {
     "python.testing.pytestArgs": [
-        "mqtt_ingestion_service"
+        "backend"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true
