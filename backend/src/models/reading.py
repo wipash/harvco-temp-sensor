@@ -18,3 +18,16 @@ class Reading(Base):
 
     # Relationships
     device = relationship("Device", back_populates="readings")
+
+    def get_adjusted_value(self) -> float:
+        """
+        Get the reading value adjusted by the device's offset.
+        
+        Returns:
+            float: The adjusted reading value
+        """
+        if self.reading_type == ReadingType.TEMPERATURE:
+            return self.value + (self.device.temperature_offset or 0.0)
+        elif self.reading_type == ReadingType.HUMIDITY:
+            return self.value + (self.device.humidity_offset or 0.0)
+        return self.value
