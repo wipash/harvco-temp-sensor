@@ -326,17 +326,33 @@ class TestDeviceCRUD:
 
     async def test_device_offset_validation(self, db_session: AsyncSession):
         """Test validation of device offset values."""
+        from pydantic import ValidationError
+        
         # Test creating device with extreme offsets
-        device_in = DeviceCreate(
-            device_id="extreme-offset-device",
-            name="Extreme Offset Device",
-            temperature_offset=15.0,  # Outside allowed range of ±10
-            humidity_offset=25.0,  # Outside allowed range of ±20
-        )
+        with pytest.raises(ValidationError) as exc_info:
+            device_in = DeviceCreate(
+                device_id="extreme-offset-device",
+                name="Extreme Offset Device",
+                temperature_offset=15.0,  # Outside allowed range of ±10
+                humidity_offset=25.0,  # Outside allowed range of ±20
+            )
+        
+        # Verify the specific validation errors
+        errors = exc_info.value.errors()
+        assert len(errors) == 2  # Should have two validation errors
+        assert any(error["type"] == "less_than_equal" and "temperature_offset" in error["loc"] for error in errors)
+        assert any(error["type"] == "less_than_equal" and "humidity_offset" in error["loc"] for error in errors)
 
-        # This should raise a validation error
-        with pytest.raises(ValueError):
-            await crud_device.create(db_session, obj_in=device_in)
+        # Test with valid offsets (should not raise)
+        valid_device = DeviceCreate(
+            device_id="valid-offset-device",
+            name="Valid Offset Device",
+            temperature_offset=5.0,
+            humidity_offset=10.0
+        )
+        device = await crud_device.create(db_session, obj_in=valid_device)
+        assert device.temperature_offset == 5.0
+        assert device.humidity_offset == 10.0
 
         # Test with null offsets (should be allowed)
         null_offset_device = DeviceCreate(
