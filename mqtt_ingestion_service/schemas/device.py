@@ -5,6 +5,8 @@ class DeviceBase(BaseModel):
     device_id: str
     name: Optional[str] = None
     is_active: Optional[bool] = True  # Make it optional with a default
+    temperature_offset: Optional[float] = 0.0
+    humidity_offset: Optional[float] = 0.0
 
 class DeviceCreate(DeviceBase):
     pass
@@ -12,6 +14,8 @@ class DeviceCreate(DeviceBase):
 class DeviceUpdate(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
+    temperature_offset: Optional[float] = None
+    humidity_offset: Optional[float] = None
 
 class DeviceOut(DeviceBase):
     id: int
