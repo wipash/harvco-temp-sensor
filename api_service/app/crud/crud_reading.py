@@ -244,22 +244,18 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
     ) -> dict[str, float]:
         """
         Get statistics for readings of a device.
-
-        Args:
-            db: Database session
-            device_id: Device ID
-            reading_type: Type of reading
-            start_date: Start date for statistics
-            end_date: End date for statistics
-
-        Returns:
-            dict: Statistics including min, max, avg
         """
-        import logging
+        # Get device first to determine offset
+        device = await crud_device.get(db, id=device_id)
+        offset = 0.0
+        if device:
+            offset = (
+                device.temperature_offset 
+                if reading_type == ReadingType.TEMPERATURE 
+                else device.humidity_offset
+            ) or 0.0
 
-        logger = logging.getLogger(__name__)
-
-        # Filter out NaN values using a WHERE clause
+        # Build query for statistics
         query = select(
             func.min(Reading.value).label("min"),
             func.max(Reading.value).label("max"),
@@ -269,8 +265,7 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
             and_(
                 Reading.device_id == device_id,
                 Reading.reading_type == reading_type,
-                Reading.value != float("nan"),  # Exclude NaN values
-                Reading.value.isnot(None),  # Exclude NULL values
+                self._valid_value_filters()
             )
         )
 
@@ -282,48 +277,24 @@ class CRUDReading(CRUDBase[Reading, ReadingCreate, ReadingUpdate]):
         result = await db.execute(query)
         stats = result.one()
 
-        logger.debug(
-            f"Raw stats from database: min={stats.min}, max={stats.max}, avg={stats.avg}, count={stats.count}"
-        )
-
-        # Convert values, defaulting to None instead of 0.0 if no valid readings
-        def safe_float(value: Any) -> Optional[float]:
+        # Convert values, applying offset to non-null values
+        def safe_float_with_offset(value: Any) -> float:
             if value is None:
-                return None
+                return 0.0
             try:
                 float_val = float(value)
                 if float_val != float_val:  # NaN check
-                    return None
-                return float_val
+                    return 0.0
+                return float_val + offset
             except (ValueError, TypeError):
-                return None
+                return 0.0
 
-        min_val = safe_float(stats.min)
-        max_val = safe_float(stats.max)
-        avg_val = safe_float(stats.avg)
-
-        # Only use 0.0 as fallback if we actually have no valid readings
-        result = {
-            "min": min_val if min_val is not None else 0.0,
-            "max": max_val if max_val is not None else 0.0,
-            "avg": avg_val if avg_val is not None else 0.0,
+        return {
+            "min": safe_float_with_offset(stats.min),
+            "max": safe_float_with_offset(stats.max),
+            "avg": safe_float_with_offset(stats.avg),
             "count": int(stats.count),
         }
-
-        # Apply offset to statistics
-        device = await crud_device.get(db, id=device_id)
-        if device:
-            offset = (
-                device.temperature_offset
-                if reading_type == ReadingType.TEMPERATURE
-                else device.humidity_offset
-            ) or 0.0
-            result["min"] += offset
-            result["max"] += offset
-            result["avg"] += offset
-
-        logger.debug(f"Final result: {result}")
-        return result
 
     async def get_readings_by_type(
         self,
