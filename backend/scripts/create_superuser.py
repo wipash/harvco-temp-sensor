@@ -8,9 +8,9 @@ Usage:
 import sys
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db import get_session
-from app.crud import user as crud_user
-from app.schemas.user import UserCreate
+from db import get_session
+from api_service.crud import user as crud_user
+from schemas.user import UserCreate
 
 async def create_superuser(email: str, password: str) -> None:
     """Create a superuser with the given email and password."""
