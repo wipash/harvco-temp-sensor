@@ -2,11 +2,11 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
-from app.crud.crud_device import device as crud_device
-from app.crud.crud_user import user as crud_user
-from app.schemas.device import DeviceCreate, DeviceUpdate
-from app.schemas.user import UserCreate
-from app.models.reading import Reading, ReadingType
+from src.api_service.crud.crud_device import device as crud_device
+from src.api_service.crud.crud_user import user as crud_user
+from src.schemas.device import DeviceCreate, DeviceUpdate
+from src.schemas.user import UserCreate
+from src.models.reading import Reading, ReadingType
 
 pytestmark = pytest.mark.asyncio
 
@@ -327,7 +327,7 @@ class TestDeviceCRUD:
     async def test_device_offset_validation(self, db_session: AsyncSession):
         """Test validation of device offset values."""
         from pydantic import ValidationError
-        
+
         # Test creating device with extreme offsets
         with pytest.raises(ValidationError) as exc_info:
             device_in = DeviceCreate(
@@ -336,7 +336,7 @@ class TestDeviceCRUD:
                 temperature_offset=15.0,  # Outside allowed range of ±10
                 humidity_offset=25.0,  # Outside allowed range of ±20
             )
-        
+
         # Verify the specific validation errors
         errors = exc_info.value.errors()
         assert len(errors) == 2  # Should have two validation errors

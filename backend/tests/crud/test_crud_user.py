@@ -1,8 +1,8 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.crud.crud_user import user as crud_user
-from app.schemas.user import UserCreate, UserUpdate
-from app.core.security import verify_password
+from src.api_service.crud.crud_user import user as crud_user
+from src.schemas.user import UserCreate, UserUpdate
+from src.api_service.core.security import verify_password
 
 pytestmark = pytest.mark.asyncio
 
@@ -10,7 +10,7 @@ class TestUserCRUD:
     async def test_create_user(self, db_session: AsyncSession, user_create_data):
         user_in = UserCreate(**user_create_data)
         user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         assert user.email == user_create_data["email"]
         assert user.is_active == user_create_data["is_active"]
         assert user.is_superuser == user_create_data["is_superuser"]
@@ -20,7 +20,7 @@ class TestUserCRUD:
         # First create a user
         user_in = UserCreate(**user_create_data)
         user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Test successful authentication
         authenticated_user = await crud_user.authenticate(
             db_session,
@@ -29,7 +29,7 @@ class TestUserCRUD:
         )
         assert authenticated_user
         assert authenticated_user.id == user.id
-        
+
         # Test failed authentication
         wrong_password_user = await crud_user.authenticate(
             db_session,
@@ -41,7 +41,7 @@ class TestUserCRUD:
     async def test_get_user(self, db_session: AsyncSession, user_create_data):
         user_in = UserCreate(**user_create_data)
         created_user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         fetched_user = await crud_user.get(db_session, id=created_user.id)
         assert fetched_user
         assert fetched_user.id == created_user.id
@@ -51,7 +51,7 @@ class TestUserCRUD:
         # Create user
         user_in = UserCreate(**user_create_data)
         user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Update user
         new_email = "updated@example.com"
         user_update = UserUpdate(email=new_email)
@@ -60,7 +60,7 @@ class TestUserCRUD:
             db_obj=user,
             obj_in=user_update
         )
-        
+
         assert updated_user.email == new_email
         assert updated_user.id == user.id
 
@@ -68,11 +68,11 @@ class TestUserCRUD:
         # Create user
         user_in = UserCreate(**user_create_data)
         user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Deactivate user
         deactivated_user = await crud_user.deactivate(db_session, user_id=user.id)
         assert not deactivated_user.is_active
-        
+
         # Verify user is deactivated but still exists
         fetched_user = await crud_user.get(db_session, id=user.id)
         assert fetched_user
@@ -84,25 +84,25 @@ class TestUserCRUD:
             {"email": f"user{i}@example.com", "password": "password123"}
             for i in range(3)
         ]
-        
+
         created_users = []
         for user_data in users_data:
             user_in = UserCreate(**user_data)
             user = await crud_user.create(db_session, obj_in=user_in)
             created_users.append(user)
-        
+
         # Test pagination
         users = await crud_user.get_multi(db_session, skip=0, limit=2)
         assert len(users) == 2
-        
+
         users = await crud_user.get_multi(db_session, skip=2, limit=2)
         assert len(users) == 1
 
     async def test_get_multi_with_devices(self, db_session: AsyncSession):
         """Test retrieving users with their associated devices."""
-        from app.schemas.device import DeviceCreate
-        from app.crud.crud_device import device as crud_device
-        
+        from src.schemas.device import DeviceCreate
+        from src.api_service.crud.crud_device import device as crud_device
+
         # Create test users
         users = []
         for i in range(3):
@@ -113,7 +113,7 @@ class TestUserCRUD:
             )
             user = await crud_user.create(db_session, obj_in=user_in)
             users.append(user)
-        
+
         # Create devices for first two users
         for user in users[:2]:
             device_in = DeviceCreate(
@@ -122,18 +122,18 @@ class TestUserCRUD:
                 is_active=True
             )
             await crud_device.create_with_owner(
-                db_session, 
+                db_session,
                 obj_in=device_in,
                 owner_id=user.id
             )
-        
+
         # Test get_multi_with_devices
         users_with_devices = await crud_user.get_multi_with_devices(
             db_session,
             skip=0,
             limit=10
         )
-        
+
         assert len(users_with_devices) == 3
         assert len(users_with_devices[0].devices) == 1
         assert len(users_with_devices[1].devices) == 1
@@ -141,9 +141,9 @@ class TestUserCRUD:
 
     async def test_get_devices_for_user(self, db_session: AsyncSession):
         """Test retrieving devices for a specific user."""
-        from app.schemas.device import DeviceCreate
-        from app.crud.crud_device import device as crud_device
-        
+        from src.schemas.device import DeviceCreate
+        from src.api_service.crud.crud_device import device as crud_device
+
         # Create test user
         user_in = UserCreate(
             email="devicetest@example.com",
@@ -151,7 +151,7 @@ class TestUserCRUD:
             is_active=True
         )
         user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Create multiple devices for user
         devices_data = [
             DeviceCreate(
@@ -161,14 +161,14 @@ class TestUserCRUD:
             )
             for i in range(3)
         ]
-        
+
         for device_in in devices_data:
             await crud_device.create_with_owner(
-                db_session, 
+                db_session,
                 obj_in=device_in,
                 owner_id=user.id
             )
-        
+
         # Test getting all devices
         devices = await crud_user.get_devices(
             db_session,
@@ -176,7 +176,7 @@ class TestUserCRUD:
             active_only=False
         )
         assert len(devices) == 3
-        
+
         # Test pagination
         paginated_devices = await crud_user.get_devices(
             db_session,
@@ -185,7 +185,7 @@ class TestUserCRUD:
             limit=1
         )
         assert len(paginated_devices) == 1
-        
+
         # Test active_only filter
         # First deactivate one device
         await crud_device.deactivate(db_session, id=devices[0].id)
@@ -198,9 +198,9 @@ class TestUserCRUD:
 
     async def test_deactivate_user_cascade(self, db_session: AsyncSession):
         """Test deactivating user and checking impact on related devices."""
-        from app.schemas.device import DeviceCreate
-        from app.crud.crud_device import device as crud_device
-        
+        from src.schemas.device import DeviceCreate
+        from src.api_service.crud.crud_device import device as crud_device
+
         # Create user with devices
         user_in = UserCreate(
             email="deactivatetest@example.com",
@@ -208,7 +208,7 @@ class TestUserCRUD:
             is_active=True
         )
         user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Create device for user
         device_in = DeviceCreate(
             device_id="test-device",
@@ -216,15 +216,15 @@ class TestUserCRUD:
             is_active=True
         )
         device = await crud_device.create_with_owner(
-            db_session, 
+            db_session,
             obj_in=device_in,
             owner_id=user.id
         )
-        
+
         # Deactivate user
         deactivated_user = await crud_user.deactivate(db_session, user_id=user.id)
         assert not deactivated_user.is_active
-        
+
         # Check if user can still authenticate
         auth_result = await crud_user.authenticate(
             db_session,
@@ -241,12 +241,12 @@ class TestUserCRUD:
             is_active=True
         )
         user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Test with invalid email format
         with pytest.raises(Exception):  # Adjust exception type based on your validation
             invalid_update = UserUpdate(email="not-an-email")
             await crud_user.update(db_session, db_obj=user, obj_in=invalid_update)
-        
+
         # Verify user wasn't changed
         unchanged_user = await crud_user.get(db_session, id=user.id)
         assert unchanged_user.email == "invalid@example.com"
@@ -259,7 +259,7 @@ class TestUserCRUD:
             ("inactive1@example.com", False),
             ("inactive2@example.com", False),
         ]
-        
+
         for email, is_active in users_data:
             user_in = UserCreate(
                 email=email,
@@ -267,11 +267,11 @@ class TestUserCRUD:
                 is_active=is_active
             )
             await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Get all users
         all_users = await crud_user.get_multi(db_session)
         assert len(all_users) == 3
-        
+
         # Count inactive users
         inactive_users = [user for user in all_users if not user.is_active]
         assert len(inactive_users) == 2
@@ -286,9 +286,9 @@ class TestUserCRUD:
             is_superuser=True
         )
         super_user = await crud_user.create(db_session, obj_in=super_user_in)
-        
+
         assert await crud_user.is_superuser(super_user)
-        
+
         # Test updating superuser status
         update_data = {"is_superuser": False}
         updated_user = await crud_user.update(
@@ -313,11 +313,11 @@ class TestUserCRUD:
             "password": "password123",
             "is_active": True
         }
-        
+
         # Create first user
         user_in = UserCreate(**user_data)
         await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Attempt to create second user with same email
         with pytest.raises(Exception):  # Adjust exception type based on your DB constraints
             await crud_user.create(db_session, obj_in=user_in)
@@ -331,7 +331,7 @@ class TestUserCRUD:
             is_active=True
         )
         user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Update password
         new_password = "newpassword123"
         update_data = {"password": new_password}
@@ -340,7 +340,7 @@ class TestUserCRUD:
             db_obj=user,
             obj_in=update_data
         )
-        
+
         # Verify old password no longer works
         old_auth = await crud_user.authenticate(
             db_session,
@@ -348,7 +348,7 @@ class TestUserCRUD:
             password="oldpassword123"
         )
         assert old_auth is None
-        
+
         # Verify new password works
         new_auth = await crud_user.authenticate(
             db_session,
@@ -367,7 +367,7 @@ class TestUserCRUD:
             is_superuser=False
         )
         user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Update only email
         update_data = {"email": "newemail@example.com"}
         updated_user = await crud_user.update(
@@ -375,7 +375,7 @@ class TestUserCRUD:
             db_obj=user,
             obj_in=update_data
         )
-        
+
         assert updated_user.email == "newemail@example.com"
         assert updated_user.is_active == user.is_active  # Should remain unchanged
         assert updated_user.is_superuser == user.is_superuser  # Should remain unchanged
@@ -390,15 +390,15 @@ class TestUserCRUD:
                 is_active=True
             )
             await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Test zero skip
         users = await crud_user.get_multi(db_session, skip=0, limit=2)
         assert len(users) == 2
-        
+
         # Test skip > total records
         users = await crud_user.get_multi(db_session, skip=10, limit=2)
         assert len(users) == 0
-        
+
         # Test large limit
         users = await crud_user.get_multi(db_session, skip=0, limit=1000)
         assert len(users) == 5
@@ -412,7 +412,7 @@ class TestUserCRUD:
             is_active=False
         )
         user = await crud_user.create(db_session, obj_in=user_in)
-        
+
         # Attempt authentication
         auth_result = await crud_user.authenticate(
             db_session,

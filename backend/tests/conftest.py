@@ -4,10 +4,10 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from typing import AsyncGenerator, Generator
-from app.models.user import User
+from src.models.user import User
 
-from app.db.base import Base
-from app.core.config import settings
+from src.models.base import Base
+from src.config import settings
 
 # Test database URL for SQLite
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -109,8 +109,8 @@ def reading_create_data():
 @pytest_asyncio.fixture
 async def test_user(db_session: AsyncSession) -> User:
     """Create a test user."""
-    from app.crud.crud_user import user as crud_user
-    from app.schemas.user import UserCreate
+    from src.api_service.crud.crud_user import user as crud_user
+    from src.schemas.user import UserCreate
 
     user_in = UserCreate(
         email="test@example.com",

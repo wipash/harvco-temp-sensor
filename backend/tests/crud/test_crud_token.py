@@ -4,9 +4,9 @@ from datetime import datetime, timedelta, UTC
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_token import crud_refresh_token
-from app.schemas.token import RefreshTokenCreate
-from app.models.token import RefreshToken
+from src.api_service.crud.crud_token import crud_refresh_token
+from src.schemas.token import RefreshTokenCreate
+from src.models.token import RefreshToken
 
 pytestmark = pytest.mark.asyncio
 
@@ -134,7 +134,7 @@ class TestCRUDRefreshToken:
             data["token_id"] = str(uuid.uuid4())
             data["expires_at"] = datetime.now(UTC) - timedelta(days=1)
             tokens_data.append(data)
-        
+
         # 1 active token
         active_data = refresh_token_create_data.copy()
         active_data["user_id"] = test_user.id

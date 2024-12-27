@@ -1,11 +1,11 @@
 import pytest
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.reading import Reading, ReadingType
-from app.models.device import Device
-from app.schemas.device import DeviceCreate
-from app.crud.crud_device import device as crud_device
-from app.crud.crud_reading import reading as crud_reading
+from src.models.reading import Reading, ReadingType
+from src.models.device import Device
+from src.schemas.device import DeviceCreate
+from src.api_service.crud.crud_device import device as crud_device
+from src.api_service.crud.crud_reading import reading as crud_reading
 
 pytestmark = pytest.mark.asyncio
 
@@ -35,7 +35,7 @@ async def create_test_reading(
     """Helper to create a test reading."""
     if timestamp is None:
         timestamp = datetime.utcnow()
-    
+
     reading = Reading(
         device_id=device_id,
         reading_type=reading_type,
@@ -52,12 +52,12 @@ class TestReadingOffsets:
         """Test temperature offset application for a single reading."""
         # Create device with temperature offset
         device = await create_test_device_with_offsets(
-            db_session, "test-device-1", 
-            temp_offset=2.5, 
+            db_session, "test-device-1",
+            temp_offset=2.5,
             humid_offset=0.0,
             owner_id=test_user.id
         )
-        
+
         # Create temperature reading
         reading = await create_test_reading(
             db_session,
@@ -65,14 +65,14 @@ class TestReadingOffsets:
             ReadingType.TEMPERATURE,
             value=20.0
         )
-        
+
         # Get reading with offset applied
         result = await crud_reading.get_latest_by_device(
             db_session,
             device_id=device.id,
             reading_type=ReadingType.TEMPERATURE
         )
-        
+
         assert result.value == 22.5  # 20.0 + 2.5
 
     async def test_single_reading_humidity_offset(self, db_session: AsyncSession, test_user):
@@ -83,20 +83,20 @@ class TestReadingOffsets:
             humid_offset=5.0,
             owner_id=test_user.id
         )
-        
+
         reading = await create_test_reading(
             db_session,
             device.id,
             ReadingType.HUMIDITY,
             value=50.0
         )
-        
+
         result = await crud_reading.get_latest_by_device(
             db_session,
             device_id=device.id,
             reading_type=ReadingType.HUMIDITY
         )
-        
+
         assert result.value == 55.0  # 50.0 + 5.0
 
     async def test_multiple_readings_with_offsets(self, db_session: AsyncSession, test_user):
@@ -107,7 +107,7 @@ class TestReadingOffsets:
             humid_offset=2.0,
             owner_id=test_user.id
         )
-        
+
         # Create multiple readings
         base_time = datetime.utcnow()
         readings = [
@@ -119,7 +119,7 @@ class TestReadingOffsets:
             )
             for i in range(5)
         ]
-        
+
         # Get readings with offsets
         results = await crud_reading.get_by_device(
             db_session,
@@ -127,7 +127,7 @@ class TestReadingOffsets:
             start_date=base_time,
             end_date=base_time + timedelta(hours=1)
         )
-        
+
         for result in results:
             if result.reading_type == ReadingType.TEMPERATURE:
                 assert result.value == float(result.id - 1) + 1.0  # Add temp offset
@@ -148,20 +148,20 @@ class TestReadingOffsets:
             obj_in=device_in,
             owner_id=test_user.id
         )
-        
+
         # Create readings
         temp_reading = await create_test_reading(
             db_session, device.id,
             ReadingType.TEMPERATURE,
             value=25.0
         )
-        
+
         humid_reading = await create_test_reading(
             db_session, device.id,
             ReadingType.HUMIDITY,
             value=60.0
         )
-        
+
         # Verify no offset applied
         temp_result = await crud_reading.get_latest_by_device(
             db_session,
@@ -169,7 +169,7 @@ class TestReadingOffsets:
             reading_type=ReadingType.TEMPERATURE
         )
         assert temp_result.value == 25.0
-        
+
         humid_result = await crud_reading.get_latest_by_device(
             db_session,
             device_id=device.id,
@@ -185,7 +185,7 @@ class TestReadingOffsets:
             humid_offset=0.0,
             owner_id=test_user.id
         )
-        
+
         # Create temperature readings: 20.0, 22.0, 24.0
         base_time = datetime.utcnow()
         for i, value in enumerate([20.0, 22.0, 24.0]):
@@ -196,7 +196,7 @@ class TestReadingOffsets:
                 value=value,
                 timestamp=base_time + timedelta(minutes=i)
             )
-        
+
         stats = await crud_reading.get_statistics(
             db_session,
             device_id=device.id,
@@ -204,7 +204,7 @@ class TestReadingOffsets:
             start_date=base_time,
             end_date=base_time + timedelta(hours=1)
         )
-        
+
         # Check statistics with offset
         assert stats["min"] == 21.5  # 20.0 + 1.5
         assert stats["max"] == 25.5  # 24.0 + 1.5
@@ -218,7 +218,7 @@ class TestReadingOffsets:
             humid_offset=999.9,  # Large offset
             owner_id=test_user.id
         )
-        
+
         # Test with zero value
         zero_reading = await create_test_reading(
             db_session,
@@ -226,14 +226,14 @@ class TestReadingOffsets:
             ReadingType.TEMPERATURE,
             value=0.0
         )
-        
+
         result = await crud_reading.get_latest_by_device(
             db_session,
             device_id=device.id,
             reading_type=ReadingType.TEMPERATURE
         )
         assert result.value == -1.0  # 0.0 + (-1.0)
-        
+
         # Test with very large value
         large_reading = await create_test_reading(
             db_session,
@@ -241,7 +241,7 @@ class TestReadingOffsets:
             ReadingType.HUMIDITY,
             value=99.9
         )
-        
+
         result = await crud_reading.get_latest_by_device(
             db_session,
             device_id=device.id,
@@ -259,12 +259,12 @@ class TestReadingOffsets:
         )
         db_session.add(reading)
         await db_session.commit()
-        
+
         result = await crud_reading.get_latest_by_device(
             db_session,
             device_id=999999,
             reading_type=ReadingType.TEMPERATURE
         )
-        
+
         # Should return raw value without offset since device doesn't exist
         assert result.value == 20.0

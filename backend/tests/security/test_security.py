@@ -2,14 +2,14 @@ import pytest
 from datetime import datetime, timedelta
 import jwt
 
-from app.core.security import (
+from src.api_service.core.security import (
     create_password_hash,
     verify_password,
     create_access_token,
     decode_token,
     ALGORITHM
 )
-from app.core.config import settings
+from src.config import settings
 
 class TestPasswordHashing:
     def test_password_hash_creation(self):

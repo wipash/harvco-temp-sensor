@@ -4,7 +4,7 @@ Tests for the Config class in config.py to verify correct loading of environment
 
 import pytest
 from pydantic import ValidationError
-from mqtt_ingestion_service.config import Config
+from src.config import Settings
 
 def test_config_loading_from_env(monkeypatch):
     """Test that Config loads values correctly from environment variables."""
@@ -16,7 +16,7 @@ def test_config_loading_from_env(monkeypatch):
     monkeypatch.setenv('DATABASE_URL', 'postgresql://user:pass@localhost/testdb')
 
     # Instantiate the Config class
-    config = Config()
+    config = Settings()
 
     # Assert that the configuration values are as expected
     assert config.mqtt_broker_host == 'test_mqtt_host'
@@ -35,7 +35,7 @@ def test_config_default_values(monkeypatch):
     monkeypatch.setenv('DATABASE_URL', 'postgresql://user:pass@localhost/testdb')
 
     # Instantiate the Config class
-    config = Config()
+    config = Settings()
 
     # Assert that the default port is used
     assert config.mqtt_broker_port == 1883
@@ -50,4 +50,4 @@ def test_config_missing_required_env_vars(monkeypatch):
 
     # Attempt to instantiate the Config class and expect a ValidationError
     with pytest.raises(ValidationError):
-        Config()
+        Settings()
