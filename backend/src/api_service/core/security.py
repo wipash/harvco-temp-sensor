@@ -62,15 +62,20 @@ def create_access_token(
     Returns:
         Encoded JWT token string
     """
+    # Create a new datetime object for now to ensure fresh timestamp
+    now = datetime.utcnow()
+    
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    expire = datetime.utcnow() + expires_delta
+    # Calculate expiration from current time
+    expire = now + expires_delta
 
     to_encode = {
         "exp": expire,
         "sub": str(subject),
-        "type": "access"
+        "type": "access",
+        "iat": now  # Add issued at time
     }
 
     return jwt.encode(
