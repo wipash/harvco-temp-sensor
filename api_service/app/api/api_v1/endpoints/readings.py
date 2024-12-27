@@ -31,9 +31,13 @@ async def apply_device_offsets(db: AsyncSession, readings: List[Reading]) -> Lis
         if device:
             for reading in device_readings:
                 if reading.reading_type == ReadingType.TEMPERATURE:
-                    reading.value += device.temperature_offset
+                    # Use 0.0 if temperature_offset is None
+                    offset = device.temperature_offset or 0.0
+                    reading.value += offset
                 elif reading.reading_type == ReadingType.HUMIDITY:
-                    reading.value += device.humidity_offset
+                    # Use 0.0 if humidity_offset is None
+                    offset = device.humidity_offset or 0.0
+                    reading.value += offset
     
     # Apply device offsets before returning
     readings = await apply_device_offsets(db, readings)
@@ -152,8 +156,12 @@ async def get_reading_statistics(
     )
 
     # Apply the appropriate offset to all statistics
-    offset = (device.temperature_offset if reading_type == ReadingType.TEMPERATURE 
-             else device.humidity_offset)
+    offset = 0.0  # Default to 0.0
+    if device:
+        if reading_type == ReadingType.TEMPERATURE:
+            offset = device.temperature_offset or 0.0
+        else:
+            offset = device.humidity_offset or 0.0
     
     stats["min"] += offset
     stats["max"] += offset
@@ -205,9 +213,11 @@ async def get_latest_reading(
     device = await crud_device.get(db, id=device_id)
     if device:
         if reading.reading_type == ReadingType.TEMPERATURE:
-            reading.value += device.temperature_offset
+            offset = device.temperature_offset or 0.0
+            reading.value += offset
         elif reading.reading_type == ReadingType.HUMIDITY:
-            reading.value += device.humidity_offset
+            offset = device.humidity_offset or 0.0
+            reading.value += offset
 
     return reading
 
