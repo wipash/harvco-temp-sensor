@@ -231,7 +231,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         )
 
         query = select(Device).where(
-            and_(Device.is_active is True, Device.id.notin_(subquery))
+            and_(Device.is_active == True, Device.id.notin_(subquery))
         )
 
         result = await db.execute(query)
