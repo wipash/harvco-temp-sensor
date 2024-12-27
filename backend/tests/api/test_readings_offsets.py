@@ -216,7 +216,7 @@ class TestReadingOffsets:
         device = await create_test_device_with_offsets(
             db_session, "test-device-6",
             temp_offset=-1.0,  # Negative offset
-            humid_offset=999.9,  # Large offset
+            humid_offset=20.0,  # Maximum allowed offset
             owner_id=test_user.id
         )
 
@@ -235,12 +235,12 @@ class TestReadingOffsets:
         )
         assert result.value == -1.0  # 0.0 + (-1.0)
 
-        # Test with very large value
+        # Test with value near maximum
         large_reading = await create_test_reading(
             db_session,
             device.id,
             ReadingType.HUMIDITY,
-            value=99.9
+            value=80.0
         )
 
         result = await crud_reading.get_latest_by_device(
@@ -248,7 +248,7 @@ class TestReadingOffsets:
             device_id=device.id,
             reading_type=ReadingType.HUMIDITY
         )
-        assert result.value == 1099.8  # 99.9 + 999.9
+        assert result.value == 100.0  # 80.0 + 20.0
 
     async def test_missing_device(self, db_session: AsyncSession):
         """Test handling of readings for non-existent device."""
