@@ -10,8 +10,8 @@ class Device(Base):
     name = Column(String, nullable=True)
     owner_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     is_active = Column(Boolean, default=True)
-    temperature_offset = Column(Float, nullable=False, default=0.0)
-    humidity_offset = Column(Float, nullable=False, default=0.0)
+    temperature_offset = Column(Float, nullable=True, server_default='0.0')
+    humidity_offset = Column(Float, nullable=True, server_default='0.0')
 
     # Relationships
     readings = relationship("Reading", back_populates="device")
