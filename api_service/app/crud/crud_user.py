@@ -146,7 +146,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         query = select(User).options(selectinload(User.devices))
 
         if active_only:
-            query = query.where(User.is_active is True)
+            query = query.where(User.is_active == True)
 
         query = query.offset(skip).limit(limit)
         result = await db.execute(query)
@@ -215,7 +215,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
         if active_only:
             # Include devices where is_active is True OR None
-            query = query.where(or_(Device.is_active is True, Device.is_active is None))
+            query = query.where(or_(Device.is_active == True, Device.is_active.is_(None)))
 
         query = query.offset(skip).limit(limit)
         logger.debug(f"Query: {query}")

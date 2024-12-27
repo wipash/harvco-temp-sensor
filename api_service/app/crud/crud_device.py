@@ -87,7 +87,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         query = select(Device).where(Device.owner_id == owner_id)
 
         if active_only:
-            query = query.where(Device.is_active is True)
+            query = query.where(Device.is_active == True)
 
         if with_latest_reading:
             from app.models.reading import Reading
@@ -157,7 +157,7 @@ class CRUDDevice(CRUDBase[Device, DeviceCreate, DeviceUpdate]):
         Returns:
             List[Device]: List of active devices
         """
-        query = select(Device).where(Device.is_active is True).offset(skip).limit(limit)
+        query = select(Device).where(Device.is_active == True).offset(skip).limit(limit)
         result = await db.execute(query)
         return list(result.scalars().all())
 
