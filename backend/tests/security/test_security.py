@@ -191,7 +191,7 @@ def test_settings_integration(mock_settings):
     # Get current time and token expiration time
     now = datetime.utcnow()
     exp_time = datetime.utcfromtimestamp(decoded["exp"])
-    
+
     # Calculate the actual minutes difference
     minutes_diff = (exp_time - now).total_seconds() / 60
 
