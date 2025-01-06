@@ -4,7 +4,7 @@ import uuid
 import jwt
 from passlib.context import CryptContext
 
-from backend.src.config import settings
+from config import settings
 
 # Configure password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -64,7 +64,7 @@ def create_access_token(
     """
     # Create a new datetime object for now to ensure fresh timestamp
     now = datetime.utcnow()
-    
+
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 

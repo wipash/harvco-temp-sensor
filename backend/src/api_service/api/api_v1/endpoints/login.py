@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import jwt
 
-from backend.src.config import settings
+from config import settings
 from api_service.core.security import (
     create_access_token,
     create_refresh_token,

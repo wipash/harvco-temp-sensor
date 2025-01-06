@@ -18,7 +18,7 @@ import jwt
 
 from db import get_session
 from api_service.core import security
-from backend.src.config import settings
+from config import settings
 from api_service.crud.crud_user import user as crud_user
 from models.user import User
 

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
 )
 
-from backend.src.config import settings
+from config import settings
 
 # Create async engine
 engine = create_async_engine(

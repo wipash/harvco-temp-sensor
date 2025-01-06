@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api_service.api.api_v1.api import api_router
-from backend.src.config import settings
+from config import settings
 from db import init_db, close_db
 
 def setup_logging() -> logging.Logger:
